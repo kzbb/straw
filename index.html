@@ -271,6 +271,11 @@
             */
             
             @media print {
+                /* B5縦書き印刷設定 */
+                @page {
+                    size: B5 portrait; /* B5縦書き */
+                    margin: 25mm 9mm 0mm 9mm; /* ページマージン */
+                }
                 /* 印刷対象以外を非表示 */
                 * {
                     visibility: hidden;
@@ -332,6 +337,15 @@
                     <div class="column-content">
                         <h5>使い方</h5>
                         
+                        <!-- 推奨環境 -->
+                        <div class="mb-4">
+                            <h6 class="text-primary">推奨環境</h6>
+                            <small class="text-muted">
+                                Chrome または Edge<br>
+                                Firefox、Safariでは、印刷時にレイアウトが崩れる場合があります。
+                            </small>
+                        </div>
+                        
                         <!-- 基本操作説明 -->
                         <div class="mb-4">
                             <h6 class="text-primary">基本操作</h6>
@@ -383,14 +397,8 @@
                                 <strong>印刷設定：</strong><br>
                                 • 用紙サイズ：B5<br>
                                 • 向き：縦<br>
-                            </small>
-                        </div>
-                        
-                        <!-- 禁則処理説明 -->
-                        <div class="mb-4">
-                            <h6 class="text-primary">禁則処理</h6>
-                            <small class="text-muted">
-                                句読点や括弧の位置を調整して、自然な改行位置で文章が折り返されます。
+                                • 余白：25mm（上）、9mm（左右）、0mm（下）<br>
+                                <strong>用紙、余白、倍率など、適宜調整してください。</strong><br>
                             </small>
                         </div>
                         
