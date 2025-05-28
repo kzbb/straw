@@ -5,269 +5,334 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>縦書き台本整形ツール</title>
         
-        <!-- Bootstrap CSS CDN - レスポンシブデザインとスタイリングのため -->
+        <!-- 
+        ========================================
+        外部依存関係
+        ========================================
+        Bootstrap CSS: レスポンシブレイアウトとUIコンポーネントのため
+        -->
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
         
         <style>
-            /* ========== 基本レイアウト設定 ========== */
-            /* HTML要素とBody要素を画面全体に設定 */
+            /* 
+            ========================================
+            1. 基本設定・リセット
+            ========================================
+            */
+            
+            /* ブラウザデフォルトリセット */
             html, body {
-                height: 100%;       /* 画面の高さを100%に設定 */
-                margin: 0;          /* デフォルトのマージンを削除 */
-                padding: 0;         /* デフォルトのパディングを削除 */
+                height: 100%;
+                margin: 0;
+                padding: 0;
             }
             
-            /* 画面全体を100%の高さに設定するクラス */
+            /* 全画面高さユーティリティ */
             .full-height {
-                height: 100vh;      /* ビューポートの高さ100%を使用 */
+                height: 100vh;
             }
             
-            /* ========== 3カラムレイアウトの設定 ========== */
-            /* 左カラム: 使い方やナビゲーション表示エリア */
-            .left-column {
-                background-color: #f8f9fa;    /* 薄いグレー背景 */
-                border-right: 1px solid #dee2e6; /* 右側に境界線 */
-            }
+            /* 
+            ========================================
+            2. レイアウトシステム（3カラム構成）
+            ========================================
+            */
             
-            /* 中央カラム: テキストエディタ表示エリア */
-            .center-column {
-                background-color: #fff;       /* 白背景 */
-                padding: 0;                   /* パディングなし */
-            }
-            
-            /* 右カラム: プレビュー表示エリア */
+            /* カラム背景・境界線 */
+            .left-column,
             .right-column {
-                background-color: #f8f9fa;    /* 薄いグレー背景 */
-                border-left: 1px solid #dee2e6; /* 左側に境界線 */
+                background-color: #f8f9fa;
             }
             
-            /* 各カラム内のコンテンツ共通スタイル */
+            .left-column {
+                border-right: 1px solid #dee2e6;
+            }
+            
+            .center-column {
+                background-color: #fff;
+                padding: 0;
+            }
+            
+            .right-column {
+                border-left: 1px solid #dee2e6;
+            }
+            
+            /* カラム内コンテンツ共通 */
             .column-content {
-                padding: 20px;                /* 内側余白 */
-                height: 100vh;                /* ビューポート高さ100% */
-                overflow-y: auto;             /* 縦方向スクロール有効 */
-                box-sizing: border-box;       /* パディングを含めたサイズ計算 */
+                padding: 20px;
+                height: 100vh;
+                overflow-y: auto;
+                box-sizing: border-box;
             }
             
-            /* ========== テキストエディタの設定 ========== */
-            /* エディタ上部のメニューバー */
+            /* 
+            ========================================
+            3. テキストエディターコンポーネント
+            ========================================
+            */
+            
+            /* エディター構造 */
             .editor-menu-bar {
-                background-color: #f8f9fa;    /* 薄いグレー背景 */
-                border-bottom: 1px solid #dee2e6; /* 下側に境界線 */
-                padding: 15px 20px;           /* 内側余白 */
-                position: sticky;             /* スクロール時に固定 */
-                top: 0;                       /* 上端に配置 */
-                z-index: 10;                  /* 他の要素より前面に表示 */
-                box-sizing: border-box;       /* パディングを含めたサイズ計算 */
+                background-color: #f8f9fa;
+                border-bottom: 1px solid #dee2e6;
+                padding: 15px 20px;
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                box-sizing: border-box;
             }
             
-            /* エディタ本体のコンテナ */
             .editor-container {
-                height: calc(100% - 60px);    /* メニューバーの高さ分を除外 */
-                position: relative;           /* 相対位置指定 */
+                height: calc(100% - 60px);
+                position: relative;
             }
             
-            /* メインのテキスト入力エリア */
+            /* エディター入力エリア */
             .code-editor {
-                width: 100%;                  /* 幅100% */
-                height: 100%;                 /* 高さ100% */
-                border: none;                 /* 境界線なし */
-                outline: none;                /* フォーカス時のアウトラインなし */
-                resize: none;                 /* リサイズ機能を無効 */
-                background-color: #fff;       /* 白背景 */
-                color: #333;                  /* 文字色は濃いグレー */
-                font-family: 'Courier New', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; /* 等幅フォント */
-                font-size: 14px;              /* 文字サイズ */
-                line-height: 1.5;             /* 行間 */
-                padding: 20px;                /* 内側余白 */
-                margin: 0;                    /* 外側余白なし */
-                box-sizing: border-box;       /* パディングを含めたサイズ計算 */
-                overflow-y: auto;             /* 縦方向スクロール有効 */
-                white-space: pre-wrap;        /* 改行と空白を保持して表示 */
-                word-wrap: break-word;        /* 長い単語を自動折り返し */
+                /* サイズ・配置 */
+                width: 100%;
+                height: 100%;
+                padding: 20px;
+                margin: 0;
+                box-sizing: border-box;
+                
+                /* 表示・動作 */
+                border: none;
+                outline: none;
+                resize: none;
+                overflow-y: auto;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                
+                /* 外観 */
+                background-color: #fff;
+                color: #333;
+                font-family: 'Courier New', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+                font-size: 14px;
+                line-height: 1.5;
             }
             
-            /* プレースホルダー（入力前の案内文）のスタイル */
             .code-editor::placeholder {
-                color: #888;                  /* 薄いグレー文字 */
-                font-style: italic;           /* 斜体文字 */
+                color: #888;
+                font-style: italic;
             }
             
-            /* エディタがフォーカスされた時のスタイル */
             .code-editor:focus {
-                background-color: #fff;       /* 白背景を維持 */
+                background-color: #fff;
             }
             
-            /* ========== 縦書き表示の設定 ========== */
-            /* 縦書きテキストを格納するコンテナ */
-            .vertical-text-container {
-                height: 100%;                 /* 高さ100% */
-                width: 100%;                  /* 幅100% */
-                background-color: #ffffff;    /* 白背景 */
-                border: 1px solid #ccc;       /* グレーの境界線 */
-                box-sizing: border-box;       /* パディングを含めたサイズ計算 */
-                overflow: hidden;             /* はみ出し部分を非表示 */
-                position: relative;           /* 相対位置指定 */
-            }
+            /* 
+            ========================================
+            4. 縦書き表示システム
+            ========================================
+            */
             
-            /* 縦書きテキスト本体のスタイル */
-            .vertical-text {
-                writing-mode: vertical-rl;    /* 縦書き、右から左へ列が進む */
-                text-orientation: upright;    /* 文字を正立（回転させない） */
-                position: absolute;           /* 絶対位置指定 */
-                right: 15px;                  /* 右側から15pxの余白 */
-                top: calc(15px + 151px);      /* 上側余白（ヘッダー分151pxを加算） */
-                width: calc(100% - 30px);     /* 左右15pxずつの余白を除いた幅 */
-                height: calc(100% - 30px - 151px); /* 上下余白とヘッダー分を除いた高さ */
-                font-family: 'MS Mincho', 'Yu Mincho', 'Hiragino Mincho ProN', serif; /* 明朝体フォント */
-                font-size: 12px;              /* 文字サイズ */
-                line-height: 1.8;             /* 行間を広めに設定 */
-                color: #333;                  /* 文字色は濃いグレー */
-                white-space: pre-wrap;        /* 改行と空白を保持して表示 */
-                overflow: hidden;             /* はみ出し部分を非表示 */
-                box-sizing: border-box;       /* パディングを含めたサイズ計算 */
-                border: none;                 /* 境界線なし */
-                outline: none;                /* アウトラインなし */
-                resize: none;                 /* リサイズ機能を無効 */
-            }
-            
-            /* ========== B5用紙レイアウトの設定 ========== */
-            /* B5サイズの用紙を模したコンテナ */
+            /* B5用紙コンテナ */
             .b5-paper {
-                width: 100%;                  /* 幅100% */
-                max-width: 400px;             /* B5の縦横比を考慮した最大幅 */
-                height: 560px;                /* B5の縦横比を考慮した高さ */
-                margin: 0 auto 20px auto;     /* 中央配置、下に20pxの余白 */
-                background-color: #ffffff;    /* 白背景（用紙を表現） */
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1); /* 紙の影を表現する影効果 */
-                position: relative;           /* 相対位置指定（子要素の基準） */
+                width: 100%;
+                max-width: 400px;
+                height: 560px;
+                margin: 0 auto 20px auto;
+                background-color: #ffffff;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                position: relative;
             }
             
-            /* ページ番号表示のスタイル */
+            /* 縦書きテキストコンテナ */
+            .vertical-text-container {
+                height: 100%;
+                width: 100%;
+                background-color: #ffffff;
+                border: 1px solid #ccc;
+                box-sizing: border-box;
+                overflow: hidden;
+                position: relative;
+            }
+            
+            /* 縦書きテキスト本体 */
+            .vertical-text {
+                /* 縦書き設定 */
+                writing-mode: vertical-rl;
+                text-orientation: upright;
+                
+                /* 配置・サイズ */
+                position: absolute;
+                right: 15px;
+                top: calc(15px + 151px - 4em);
+                width: calc(100% - 30px);
+                height: calc(100% - 30px - 151px + 4em);
+                padding-top: 4em;
+                
+                /* 表示設定 */
+                overflow: hidden;
+                white-space: pre-wrap;
+                border: none;
+                outline: none;
+                resize: none;
+                box-sizing: border-box;
+                
+                /* フォント・文字 */
+                font-family: 'MS Mincho', 'Yu Mincho', 'Hiragino Mincho ProN', serif;
+                font-size: 12px;
+                line-height: 1.8;
+                color: #333;
+            }
+            
+            /* ページ番号 */
             .page-number {
-                position: absolute;           /* 絶対位置指定 */
-                bottom: 10px;                 /* 下端から10px */
-                left: 50%;                    /* 左端から50%の位置 */
-                transform: translateX(-50%);  /* 左に50%移動して中央寄せ */
-                font-size: 10px;              /* 小さな文字サイズ */
-                color: #666;                  /* 薄いグレー文字 */
+                position: absolute;
+                bottom: 10px;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 10px;
+                color: #666;
             }
             
-            /* ========== 印刷用スタイル（@media print） ========== */
+            /* 
+            ========================================
+            5. 台本専用要素
+            ========================================
+            */
+            
+            /* 柱書スタイル */
+            .chapter-line {
+                color: #000;
+                display: block;
+                margin-bottom: 0;
+                position: relative;
+                top: -4em;
+                border: #000 1px solid;
+                border-bottom: none;
+                margin-left: 0.5em;
+                margin-right: 0.5em;
+                height: calc(29em + 4em);
+            }
+            
+            /* 
+            ========================================
+            6. 通知システム
+            ========================================
+            */
+            
+            /* 通知ベース */
+            .notification {
+                /* 配置 */
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 1000;
+                
+                /* サイズ・外観 */
+                padding: 15px 20px;
+                max-width: 300px;
+                border-radius: 5px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                
+                /* 文字 */
+                color: white;
+                font-weight: bold;
+                font-size: 14px;
+                
+                /* アニメーション */
+                opacity: 0;
+                transform: translateX(100%);
+                transition: all 0.3s ease-in-out;
+            }
+            
+            /* 通知状態 */
+            .notification.show {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            
+            .notification.fade-out {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            
+            /* 通知種類別カラー */
+            .notification-success {
+                background-color: #28a745;
+            }
+            
+            .notification-warning {
+                background-color: #ffc107;
+                color: #333;
+            }
+            
+            .notification-error {
+                background-color: #dc3545;
+            }
+            
+            /* 
+            ========================================
+            7. 印刷専用スタイル
+            ========================================
+            */
+            
             @media print {
-                /* 印刷時は全ての要素を一旦非表示 */
+                /* 印刷対象以外を非表示 */
                 * {
                     visibility: hidden;
                 }
                 
-                /* B5ページコンテナとその子要素のみ表示 */
                 #pages-container,
                 #pages-container * {
                     visibility: visible;
                 }
                 
-                /* 印刷時のページコンテナ設定 */
+                /* 印刷レイアウト調整 */
                 #pages-container {
-                    position: absolute;        /* 絶対位置指定 */
-                    left: 0;                   /* 左端に配置 */
-                    top: 0;                    /* 上端に配置 */
-                    width: 100%;               /* 幅100% */
-                    transform: scale(2.28);    /* B5実寸に拡大（計算値） */
-                    transform-origin: top left; /* 左上を基準に拡大 */
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    transform: scale(2.28);
+                    transform-origin: top left;
                 }
                 
-                /* 印刷時のB5用紙設定 */
                 .b5-paper {
-                    page-break-after: always;  /* 各ページの後で改ページ */
-                    margin: 0 0 20px 0;        /* 左右マージンなし、下に20px */
-                    max-width: none;           /* 最大幅制限を解除 */
-                    width: 400px;              /* 画面表示と同じサイズを維持 */
-                    height: 560px;             /* 画面表示と同じサイズを維持 */
-                    box-shadow: none;          /* 印刷時は影を除去 */
+                    page-break-after: always;
+                    margin: 0 0 20px 0;
+                    max-width: none;
+                    width: 400px;
+                    height: 560px;
+                    box-shadow: none;
                 }
                 
-                /* 印刷時は縦書きコンテナの枠線を非表示 */
                 .vertical-text-container {
                     border: none;
                 }
                 
-                /* 印刷時もページ番号を表示 */
                 .page-number {
-                    display: block;            /* ブロック要素として表示 */
-                    visibility: visible;       /* 表示状態を維持 */
+                    display: block;
+                    visibility: visible;
                 }
-                
-                /* 印刷時の縦書きテキスト位置調整 */
-                .vertical-text {
-                    right: 15px;               /* 右側から15pxの余白 */
-                    top: calc(15px + 151px);   /* 上側余白（ヘッダー分151pxを加算） */
-                    width: calc(100% - 30px);  /* 左右15pxずつの余白を除いた幅 */
-                    height: calc(100% - 30px - 151px); /* 上下余白とヘッダー分を除いた高さ */
-                    font-size: 12px;           /* 文字サイズ */
-                    line-height: 1.8;          /* 行間 */
-                }
-            }
-            
-            /* ========== 通知システムのスタイル ========== */
-            /* 通知メッセージの基本スタイル */
-            .notification {
-                position: fixed;               /* 固定位置指定 */
-                top: 20px;                     /* 上端から20px */
-                right: 20px;                   /* 右端から20px */
-                padding: 15px 20px;            /* 内側余白 */
-                border-radius: 5px;            /* 角の丸み */
-                color: white;                  /* 白文字 */
-                font-weight: bold;             /* 太字 */
-                font-size: 14px;               /* 文字サイズ */
-                z-index: 1000;                 /* 最前面に表示 */
-                opacity: 0;                    /* 初期状態は透明 */
-                transform: translateX(100%);   /* 初期状態は右に移動 */
-                transition: all 0.3s ease-in-out; /* アニメーション設定 */
-                max-width: 300px;              /* 最大幅 */
-                box-shadow: 0 4px 12px rgba(0,0,0,0.2); /* 影効果 */
-            }
-            
-            /* 通知表示時のスタイル */
-            .notification.show {
-                opacity: 1;                    /* 不透明度100% */
-                transform: translateX(0);      /* 元の位置に移動 */
-            }
-            
-            /* 通知フェードアウト時のスタイル */
-            .notification.fade-out {
-                opacity: 0;                    /* 透明に戻す */
-                transform: translateX(100%);   /* 右に移動して非表示 */
-            }
-            
-            /* 成功通知の背景色（緑） */
-            .notification-success {
-                background-color: #28a745;
-            }
-            
-            /* 警告通知の背景色（黄） */
-            .notification-warning {
-                background-color: #ffc107;
-                color: #333;                   /* 黄背景では黒文字 */
-            }
-            
-            /* エラー通知の背景色（赤） */
-            .notification-error {
-                background-color: #dc3545;
             }
         </style>
     </head>
     
     <body>
-        <!-- メインコンテナ: Bootstrap Fluidコンテナで全画面使用 -->
+        <!-- 
+        ========================================
+        メインアプリケーション構造
+        ========================================
+        Bootstrap Gridシステムによる3カラムレイアウト
+        -->
         <div class="container-fluid full-height">
             <div class="row h-100">
                 
-                <!-- ========== 左カラム: 使い方とナビゲーション ========== -->
+                <!-- 
+                ========================================
+                左カラム：使い方・ナビゲーション
+                ========================================
+                アプリケーションの説明とガイド表示
+                -->
                 <div class="col-md-2 left-column">
                     <div class="column-content">
                         <h5>使い方</h5>
                         
-                        <!-- 基本的な使い方の説明 -->
+                        <!-- 基本操作説明 -->
                         <div class="mb-4">
                             <h6 class="text-primary">基本操作</h6>
                             <small class="text-muted">
@@ -275,7 +340,7 @@
                             </small>
                         </div>
                         
-                        <!-- 柱書の説明 -->
+                        <!-- 柱書機能説明 -->
                         <div class="mb-4">
                             <h6 class="text-primary">柱書</h6>
                             <small class="text-muted">
@@ -283,7 +348,7 @@
                             </small>
                         </div>
 
-                        <!-- ト書きの説明 -->
+                        <!-- ト書き機能説明 -->
                         <div class="mb-4">
                             <h6 class="text-primary">ト書き</h6>
                             <small class="text-muted">
@@ -291,7 +356,7 @@
                             </small>
                         </div>
 
-                        <!-- セリフ行の説明 -->
+                        <!-- セリフ行機能説明 -->
                         <div class="mb-4">
                             <h6 class="text-primary">セリフ行</h6>
                             <small class="text-muted">
@@ -299,7 +364,7 @@
                             </small>
                         </div>
                         
-                        <!-- レイアウト仕様の説明 -->
+                        <!-- レイアウト仕様説明 -->
                         <div class="mb-4">
                             <h6 class="text-primary">レイアウト</h6>
                             <small class="text-muted">
@@ -310,7 +375,7 @@
                             </small>
                         </div>
                         
-                        <!-- 印刷機能の説明 -->
+                        <!-- 印刷機能説明 -->
                         <div class="mb-4">
                             <h6 class="text-primary">印刷</h6>
                             <small class="text-muted">
@@ -321,7 +386,7 @@
                             </small>
                         </div>
                         
-                        <!-- 禁則処理の説明 -->
+                        <!-- 禁則処理説明 -->
                         <div class="mb-4">
                             <h6 class="text-primary">禁則処理</h6>
                             <small class="text-muted">
@@ -348,30 +413,33 @@
                     </div>
                 </div>
                 
-                <!-- ========== 中央カラム: テキストエディタ ========== -->
+                <!-- 
+                ========================================
+                中央カラム：テキストエディター
+                ========================================
+                メインの入力インターフェース
+                -->
                 <div class="col-md-5 center-column">
-                    <!-- エディタメニューバー（タイトルとボタン） -->
+                    <!-- エディターメニューバー -->
                     <div class="editor-menu-bar">
                         <div class="d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">テキストエディター</h5>
                             <div>
-                                <!-- ファイル読み込みボタン -->
+                                <!-- ファイル操作ボタン群 -->
                                 <button class="btn btn-outline-primary btn-sm me-2" onclick="loadText()">
                                     ファイルを開く
                                 </button>
-                                <!-- ファイル保存ボタン -->
                                 <button class="btn btn-success btn-sm" onclick="saveText()">
                                     保存
                                 </button>
-                                <!-- 非表示のファイル入力フィールド（ファイル選択用） -->
+                                <!-- 隠しファイル入力要素（プログラムからトリガー） -->
                                 <input type="file" id="fileInput" accept=".txt" style="display: none;" onchange="handleFileSelect(event)">
                             </div>
                         </div>
                     </div>
                     
-                    <!-- エディタ本体のコンテナ -->
+                    <!-- エディター本体 -->
                     <div class="editor-container">
-                        <!-- メインのテキスト入力エリア -->
                         <textarea 
                             class="code-editor" 
                             id="editor" 
@@ -379,342 +447,435 @@
                     </div>
                 </div>
                 
-                <!-- ========== 右カラム: プレビューエリア ========== -->
+                <!-- 
+                ========================================
+                右カラム：縦書きプレビュー
+                ========================================
+                リアルタイム縦書き表示とページプレビュー
+                -->
                 <div class="col-md-5 right-column">
                     <div class="column-content">
-                        <!-- ヘッダー部分: タイトルと印刷ボタン -->
+                        <!-- プレビューヘッダー -->
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h5>プレビュー</h5>
                             <div class="text-end">
-                                <!-- 印刷実行ボタン -->
                                 <button class="btn btn-primary btn-sm" onclick="printPages()">
                                     印刷
                                 </button>
-                                <!-- 印刷設定の案内 -->
                                 <small class="d-block text-muted mt-1" style="white-space: nowrap;">
                                     ※印刷設定でB5用紙を選択してください
                                 </small>
                             </div>
                         </div>
-                        <!-- B5ページのプレビューコンテナ（動的に生成される） -->
+                        <!-- B5ページプレビューコンテナ（JavaScriptで動的生成） -->
                         <div id="pages-container"></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Bootstrap JavaScript CDN（UI コンポーネント用） -->
+        <!-- Bootstrap JavaScript（UIコンポーネント用） -->
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
         
         <script>
+            /* 
+            ========================================
+            アプリケーションコア：テキスト処理エンジン
+            ========================================
+            */
+
             /**
-             * テキストを縦書きB5サイズのページに分割する関数
+             * 縦書きB5ページ分割メイン関数
              * 
-             * この関数は入力されたテキストを以下の仕様で処理します：
-             * - B5用紙サイズ（1ページ17行、1行29文字）
-             * - 日本語禁則処理（句読点や括弧の適切な改行）
-             * - 柱書の自動番号振り
-             * - セリフ行の自動インデント
+             * 【機能概要】
+             * 入力テキストを台本用B5縦書きレイアウトに変換
+             * - B5用紙サイズ：1ページ17行、1行29文字
+             * - 日本語禁則処理：句読点・括弧の適切な改行制御
+             * - 柱書処理：自動番号振り（◯○◎◇□＊☆ → 数字）
+             * - セリフ行処理：カギカッコ行の自動インデント
              * 
-             * @param {string} text - 入力されたテキスト
-             * @returns {Array<string>} - ページごとに分割されたテキストの配列
+             * @param {string} text - 入力テキスト（改行区切り）
+             * @returns {Array<Array<Object>>} ページ配列（各ページは行オブジェクトの配列）
+             *   行オブジェクト形式：{ text: string, isChapter: boolean }
              */
             function formatVerticalTextToPages(text) {
-                // ========== B5縦書きレイアウトの制約設定 ========== 
-                const maxLines = 17;          // 1ページあたりの最大行数
-                const maxCharsPerLine = 29;   // 1行あたりの最大文字数
-                const lines = text.split('\n'); // 改行で行を分割
-                let allFormattedLines = [];   // 整形後の全行を格納する配列
-                let chapterNumber = 1;        // 柱書の番号カウンタ
+                // 
+                // ========== B5縦書きレイアウト制約 ==========
+                // 
+                const maxLines = 17;                    // 1ページ最大行数
+                const maxCharsPerLine = 29;             // 1行最大文字数
+                const lines = text.split('\n');        // 入力を行単位に分割
+                let allFormattedLines = [];             // 整形後全行格納配列
+                let chapterNumber = 1;                  // 柱書連番カウンタ
                 
-                // ========== 日本語禁則処理の設定 ========== 
-                const startChars = '。、？！」』）〕］｝〉》】〗〙〛ー：；'; // 行頭禁止文字（句読点、閉じ括弧など）
-                const endChars = '「『（〔［｛〈《【〖〘〚';             // 行末禁止文字（開き括弧など）
-                const punctuation = '。、？！：；';                    // 句読点（現在未使用だが将来の拡張用）
+                // 
+                // ========== 日本語禁則処理設定 ==========
+                // 
+                const startChars = '。、？！」』）〕］｝〉》】〗〙〛ー：；'; // 行頭禁止文字
+                const endChars = '「『（〔［｛〈《【〖〘〚';                // 行末禁止文字
+                const punctuation = '。、？！：；';                        // 句読点類（拡張用）
                 
                 /**
-                 * 指定文字の後で改行可能かチェックする関数
-                 * 日本語の禁則処理ルールに基づいて判定
+                 * 禁則処理判定関数
                  * 
-                 * @param {string} char - 現在の文字
-                 * @param {string} nextChar - 次の文字
-                 * @returns {boolean} - 改行可能かどうか
+                 * 【判定ロジック】
+                 * 1. 行末禁止文字（開き括弧等）の後では改行不可
+                 * 2. 行頭禁止文字（句読点等）の前では改行不可
+                 * 
+                 * @param {string} char - 現在文字
+                 * @param {string} nextChar - 次文字
+                 * @returns {boolean} 改行可能フラグ
                  */
                 function canBreakAfter(char, nextChar) {
-                    // 行末禁止文字（開き括弧など）の後では改行不可
-                    if (endChars.includes(char)) return false;
-                    // 次の文字が行頭禁止文字（句読点など）の場合は改行不可
-                    if (nextChar && startChars.includes(nextChar)) return false;
-                    return true; // その他の場合は改行可能
+                    if (endChars.includes(char)) return false;        // 行末禁止文字チェック
+                    if (nextChar && startChars.includes(nextChar)) return false; // 行頭禁止文字チェック
+                    return true;                                       // その他は改行可能
                 }
                 
                 /**
-                 * 禁則処理を考慮した最適な改行位置を見つける関数
-                 * 最大文字数から逆算して、適切な改行位置を探す
+                 * 最適改行位置探索関数
+                 * 
+                 * 【探索アルゴリズム】
+                 * 1. 最大文字数から逆方向に探索
+                 * 2. 禁則処理に適合する位置を優先
+                 * 3. 最大5文字手前まで探索
+                 * 4. 見つからない場合は強制切断
                  * 
                  * @param {string} text - 対象テキスト
                  * @param {number} maxLength - 最大文字数
-                 * @returns {number} - 改行位置のインデックス
+                 * @returns {number} 最適改行位置インデックス
                  */
                 function findBreakPoint(text, maxLength) {
-                    // テキストが最大文字数以下の場合はそのまま
-                    if (text.length <= maxLength) return maxLength;
+                    if (text.length <= maxLength) return maxLength;   // 制限内ならそのまま
                     
-                    // 最大文字数から逆算して最適な改行位置を探す
-                    // 最大5文字手前まで遡って検索（調整可能）
+                    // 逆方向探索：最大5文字手前まで
                     for (let i = maxLength; i > Math.max(1, maxLength - 5); i--) {
-                        if (i >= text.length) continue; // 範囲外チェック
-                        const char = text[i - 1];      // 改行位置の直前の文字
-                        const nextChar = text[i];      // 改行位置の直後の文字
+                        if (i >= text.length) continue;               // 範囲外スキップ
                         
-                        // 禁則処理に引っかからない位置なら採用
+                        const char = text[i - 1];                     // 改行直前文字
+                        const nextChar = text[i];                     // 改行直後文字
+                        
                         if (canBreakAfter(char, nextChar)) {
-                            return i;
+                            return i;                                  // 適切な位置発見
                         }
                     }
                     
-                    // 適切な改行位置が見つからない場合は強制的に切断
-                    return maxLength;
+                    return maxLength;                                  // 強制切断
                 }
                 
-                // ========== 各行の処理ループ ========== 
+                // 
+                // ========== 各行処理メインループ ==========
+                // 
                 for (let line of lines) {
-                    // 空行の場合はそのまま追加
+                    // 空行処理：そのまま追加
                     if (line.length === 0) {
-                        allFormattedLines.push('');
-                        continue; // 次の行へ
+                        allFormattedLines.push({ text: '', isChapter: false });
+                        continue;
                     }
                     
-                    // ========== 柱書（行頭が◯○◎◇□＊☆）の処理 ========== 
+                    // 
+                    // ========== 柱書処理 ==========
+                    // パターン：行頭の ◯○◎◇□＊☆ を番号に変換
+                    // 
                     if (line.trim().match(/^[◯○◎◇□＊☆]/)) {
-                        // 記号を番号に置換（◯ → 1、○ → 2、など）
-                        const chapterText = line.replace(/^\s*[◯○◎◇□＊☆]/, `${chapterNumber}`);
-                        chapterNumber++; // 次の柱書のために番号をインクリメント
+                        // 番号変換：記号 → "  1 "形式（3桁+空白）
+                        const chapterNumber3Digits = String(chapterNumber).padStart(3, ' ') + ' ';
+                        const chapterText = line.replace(/^\s*[◯○◎◇□＊☆]/, chapterNumber3Digits);
+                        chapterNumber++;                               // 連番インクリメント
                         
-                        // 柱書として処理（通常の行と同じ折り返し処理を適用）
+                        // 柱書の折り返し処理
                         const indentMatch = chapterText.match(/^(\s*)/);
                         const baseIndent = indentMatch ? indentMatch[1] : '';
                         
-                        // 柱書が29文字以内の場合はそのまま
                         if (chapterText.length <= maxCharsPerLine) {
-                            allFormattedLines.push(chapterText);
+                            // 1行以内：そのまま追加
+                            allFormattedLines.push({ text: chapterText, isChapter: true });
                         } else {
-                            // 29文字を超える場合は自動折り返し処理
+                            // 折り返し必要：分割処理
                             const firstLineBreak = findBreakPoint(chapterText, maxCharsPerLine);
                             const firstLine = chapterText.substring(0, firstLineBreak);
-                            allFormattedLines.push(firstLine);
+                            allFormattedLines.push({ text: firstLine, isChapter: true });
                             
-                            // 残りのテキストを処理
+                            // 残りテキスト処理
                             let remainingText = chapterText.substring(firstLineBreak);
                             
-                            // 残りテキストがある限り繰り返し処理
                             while (remainingText.length > 0) {
                                 const availableSpace = maxCharsPerLine - baseIndent.length;
                                 
                                 if (availableSpace <= 0) {
-                                    // インデントが29文字を超える場合は強制切り取り
+                                    // インデント過大：強制切断
                                     const breakPoint = findBreakPoint(remainingText, maxCharsPerLine);
-                                    allFormattedLines.push(remainingText.substring(0, breakPoint));
+                                    allFormattedLines.push({ text: remainingText.substring(0, breakPoint), isChapter: true });
                                     remainingText = remainingText.substring(breakPoint);
                                 } else if (remainingText.length <= availableSpace) {
-                                    // 残りが全て利用可能スペースに収まる場合
-                                    allFormattedLines.push(baseIndent + remainingText);
-                                    break; // 処理完了
+                                    // 残り全部収まる：完了
+                                    allFormattedLines.push({ text: baseIndent + remainingText, isChapter: true });
+                                    break;
                                 } else {
-                                    // 分割が必要な場合
+                                    // 分割継続
                                     const breakPoint = findBreakPoint(remainingText, availableSpace);
-                                    allFormattedLines.push(baseIndent + remainingText.substring(0, breakPoint));
+                                    allFormattedLines.push({ text: baseIndent + remainingText.substring(0, breakPoint), isChapter: true });
                                     remainingText = remainingText.substring(breakPoint);
                                 }
                             }
                         }
-                        continue; // 柱書処理完了、次の行へ
+                        continue;
                     }
                     
-                    // ========== 通常行の処理 ========== 
-                    // 行の最初の空白文字（インデント）を検出
+                    // 
+                    // ========== 通常行処理 ==========
+                    // 
+                    
+                    // インデント検出
                     const indentMatch = line.match(/^(\s*)/);
                     const baseIndent = indentMatch ? indentMatch[1] : '';
                     
-                    // 1行の文字数が制限内の場合はそのまま追加
                     if (line.length <= maxCharsPerLine) {
-                        allFormattedLines.push(line);
+                        // 1行以内：そのまま追加
+                        allFormattedLines.push({ text: line, isChapter: false });
                     } else {
-                        // ========== 29文字を超える場合の自動折り返し処理 ========== 
+                        // 
+                        // ========== 29文字超過：自動折り返し処理 ==========
+                        // 
                         
-                        // 最初の行の改行位置を禁則処理を考慮して決定
+                        // 第1行の改行位置決定
                         const firstLineBreak = findBreakPoint(line, maxCharsPerLine);
                         const firstLine = line.substring(0, firstLineBreak);
-                        allFormattedLines.push(firstLine);
+                        allFormattedLines.push({ text: firstLine, isChapter: false });
                         
-                        // 元の行全体でカギカッコで終わるかどうかをチェック
-                        // （改行前の行末ではなく、元の行全体の末尾で判定）
+                        // セリフ行判定：元行全体でカギカッコ終了チェック
                         const originalLineEndsWithQuote = line.trim().endsWith('」') || line.trim().endsWith('』');
                         
-                        // 残りのテキストを処理
+                        // 残りテキスト処理
                         let remainingText = line.substring(firstLineBreak);
                         
-                        // 残りテキストがある限り繰り返し処理
                         while (remainingText.length > 0) {
-                            // ========== インデントを決定（2行目以降のみ） ========== 
+                            // 
+                            // ========== 2行目以降のインデント決定 ==========
+                            // 
                             let currentIndent;
                             if (originalLineEndsWithQuote) {
-                                // 元の行がカギカッコで終わる場合は4文字インデント
-                                // （セリフ行の折り返し処理）
-                                currentIndent = '　　　　'; // 全角スペース4文字
+                                // セリフ行：4文字インデント
+                                currentIndent = '　　　　';             // 全角スペース4文字
                             } else {
-                                // 通常は元のインデントを継続
+                                // 通常行：元インデント継続
                                 currentIndent = baseIndent;
                             }
                             
-                            // インデント分を差し引いた利用可能文字数を計算
+                            // 利用可能文字数計算
                             const availableSpace = maxCharsPerLine - currentIndent.length;
                             
                             if (availableSpace <= 0) {
-                                // インデントが29文字を超える場合は強制切り取り
+                                // インデント過大：強制切断
                                 const breakPoint = findBreakPoint(remainingText, maxCharsPerLine);
-                                allFormattedLines.push(remainingText.substring(0, breakPoint));
+                                allFormattedLines.push({ text: remainingText.substring(0, breakPoint), isChapter: false });
                                 remainingText = remainingText.substring(breakPoint);
                             } else if (remainingText.length <= availableSpace) {
-                                // 残りが全て利用可能スペースに収まる場合
-                                allFormattedLines.push(currentIndent + remainingText);
-                                break; // 処理完了
+                                // 残り全部収まる：完了
+                                allFormattedLines.push({ text: currentIndent + remainingText, isChapter: false });
+                                break;
                             } else {
-                                // 分割が必要な場合
+                                // 分割継続
                                 const breakPoint = findBreakPoint(remainingText, availableSpace);
-                                allFormattedLines.push(currentIndent + remainingText.substring(0, breakPoint));
+                                allFormattedLines.push({ text: currentIndent + remainingText.substring(0, breakPoint), isChapter: false });
                                 remainingText = remainingText.substring(breakPoint);
                             }
                         }
                     }
                 }
                 
-                // ========== ページ分割処理 ========== 
+                // 
+                // ========== ページ分割処理 ==========
+                // 17行制限によるページ分割（柱書は1.8行相当）
+                // 
                 const pages = [];
-                
-                // 17行ごとにページに分割
-                for (let i = 0; i < allFormattedLines.length; i += maxLines) {
-                    let pageLines = allFormattedLines.slice(i, i + maxLines);
+                let currentPage = [];
+                let currentLineCount = 0;
+
+                for (let lineObj of allFormattedLines) {
+                    // 行重み計算：柱書1.8行、通常行1行
+                    const lineWeight = lineObj.isChapter ? 1.8 : 1;
                     
-                    // 最後のページで17行に満たない場合は空行で埋める
-                    if (i + maxLines >= allFormattedLines.length) {
-                        while (pageLines.length < maxLines) {
-                            pageLines.push(''); // 空行を追加
+                    // ページ容量チェック：17行超過判定
+                    if (currentLineCount + lineWeight > maxLines && currentPage.length > 0) {
+                        // 現ページを17行で埋めて確定
+                        while (Math.ceil(currentLineCount) < maxLines) {
+                            currentPage.push({ text: '', isChapter: false });
+                            currentLineCount += 1;
                         }
+                        
+                        pages.push(currentPage);                      // ページ確定
+                        currentPage = [];                             // 新ページ開始
+                        currentLineCount = 0;
                     }
                     
-                    // ページの内容を改行で結合
-                    pages.push(pageLines.join('\n'));
+                    // 行追加
+                    currentPage.push(lineObj);
+                    currentLineCount += lineWeight;
                 }
-                
-                // テキストが空の場合でも最低1ページは表示
+
+                // 最終ページ処理
+                if (currentPage.length > 0) {
+                    // 17行まで空行で埋める
+                    while (Math.ceil(currentLineCount) < maxLines) {
+                        currentPage.push({ text: '', isChapter: false });
+                        currentLineCount += 1;
+                    }
+                    pages.push(currentPage);
+                }
+
+                // 空テキスト用最低1ページ保証
                 if (pages.length === 0) {
-                    pages.push('');
+                    const emptyPage = [];
+                    for (let i = 0; i < maxLines; i++) {
+                        emptyPage.push({ text: '', isChapter: false });
+                    }
+                    pages.push(emptyPage);
                 }
-                
+
                 return pages;
             }
             
+            /* 
+            ========================================
+            UI更新システム：プレビュー表示
+            ========================================
+            */
+
             /**
-             * 縦書きプレビューを更新する関数
-             * エディタの内容をB5ページ形式で表示する
+             * 縦書きプレビュー更新関数
              * 
-             * この関数は以下の処理を行います：
-             * 1. エディタからテキストを取得
-             * 2. ページ形式に変換
-             * 3. 既存のプレビューをクリア
-             * 4. 新しいプレビューページを生成・表示
+             * 【処理フロー】
+             * 1. エディタテキスト取得
+             * 2. ページ形式変換
+             * 3. 既存プレビュークリア
+             * 4. 新プレビュー生成・表示
+             * 
+             * リアルタイム更新：inputイベントで自動実行
              */
             function updateVerticalDisplay() {
-                // DOM要素を取得
+                // DOM要素取得
                 const editor = document.getElementById('editor');
                 const pagesContainer = document.getElementById('pages-container');
                 
-                // テキストをページ形式に変換
+                // テキスト → ページ変換
                 const pages = formatVerticalTextToPages(editor.value);
                 
-                // 既存のページ表示をクリア
+                // 既存表示クリア
                 pagesContainer.innerHTML = '';
                 
-                // ========== 各ページのHTML生成と表示 ========== 
-                pages.forEach((pageContent, index) => {
-                    // ページ全体のコンテナ作成
+                // 
+                // ========== 各ページHTML生成 ==========
+                // 
+                pages.forEach((pageLines, index) => {
+                    // ページ全体コンテナ
                     const pageDiv = document.createElement('div');
-                    pageDiv.className = 'mb-4'; // Bootstrap: margin-bottom
+                    pageDiv.className = 'mb-4';                       // Bootstrap下部マージン
                     
-                    // B5用紙を表現するコンテナ作成
+                    // B5用紙コンテナ
                     const paperDiv = document.createElement('div');
                     paperDiv.className = 'b5-paper';
                     
-                    // ========== SVGオーバーレイの作成（水平線用） ========== 
+                    // 
+                    // ========== SVGオーバーレイ：水平線描画 ==========
+                    // 
                     const svgOverlay = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                    svgOverlay.style.position = 'absolute';     // 絶対位置指定
-                    svgOverlay.style.top = '0';                 // 上端に配置
-                    svgOverlay.style.left = '0';                // 左端に配置
-                    svgOverlay.style.width = '100%';            // 幅100%
-                    svgOverlay.style.height = '100%';           // 高さ100%
-                    svgOverlay.style.pointerEvents = 'none';    // マウスイベントを透過
-                    svgOverlay.style.zIndex = '5';              // テキストより前面に表示
-                    svgOverlay.setAttribute('viewBox', '0 0 100 100'); // SVG座標系設定
+                    svgOverlay.style.position = 'absolute';           // 絶対位置
+                    svgOverlay.style.top = '0';
+                    svgOverlay.style.left = '0';
+                    svgOverlay.style.width = '100%';
+                    svgOverlay.style.height = '100%';
+                    svgOverlay.style.pointerEvents = 'none';          // マウス透過
+                    svgOverlay.style.zIndex = '5';                    // テキスト前面
+                    svgOverlay.setAttribute('viewBox', '0 0 100 100');
                     
-                    // 水平線を作成（上から20%の位置、幅95%）
+                    // 水平線要素
                     const horizontalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    horizontalLine.setAttribute('x1', '2.5');   // 左端から2.5%（95%の線なので余白は2.5%ずつ）
-                    horizontalLine.setAttribute('y1', '20');    // 上から20%の位置
-                    horizontalLine.setAttribute('x2', '97.5');  // 右端まで97.5%（95%の幅）
-                    horizontalLine.setAttribute('y2', '20');    // 同じ高さ（水平線）
+                    horizontalLine.setAttribute('x1', '2.5');         // 左端2.5%
+                    horizontalLine.setAttribute('y1', '20');          // 上から20%
+                    horizontalLine.setAttribute('x2', '97.5');        // 右端97.5%
+                    horizontalLine.setAttribute('y2', '20');          // 水平線
                     horizontalLine.setAttribute('stroke', '#000000'); // 黒色
-                    horizontalLine.setAttribute('stroke-width', '0.1'); // 細い線
+                    horizontalLine.setAttribute('stroke-width', '0.15'); // 細線
                     
-                    // SVGに線を追加
                     svgOverlay.appendChild(horizontalLine);
                     
-                    // ========== 縦書きテキスト表示部分の作成 ========== 
-                    // 縦書きテキストのコンテナ作成
+                    // 
+                    // ========== 縦書きテキスト部分 ==========
+                    // 
                     const containerDiv = document.createElement('div');
                     containerDiv.className = 'vertical-text-container';
                     
-                    // 実際のテキスト表示エリア作成
                     const textDiv = document.createElement('div');
                     textDiv.className = 'vertical-text';
-                    textDiv.textContent = pageContent; // テキスト内容を設定
                     
-                    // ページ番号表示作成
+                    // 各行のHTML要素生成
+                    pageLines.forEach((lineObj, lineIndex) => {
+                        if (lineObj.isChapter) {
+                            // 柱書：div要素使用（特別スタイル適用）
+                            const lineDiv = document.createElement('div');
+                            lineDiv.textContent = lineObj.text;
+                            lineDiv.classList.add('chapter-line');
+                            textDiv.appendChild(lineDiv);
+                        } else {
+                            // 通常行：span要素使用
+                            const lineSpan = document.createElement('span');
+                            lineSpan.textContent = lineObj.text;
+                            
+                            // 最終行以外は改行追加
+                            if (lineIndex < pageLines.length - 1) {
+                                lineSpan.appendChild(document.createTextNode('\n'));
+                            }
+                            
+                            textDiv.appendChild(lineSpan);
+                        }
+                    });
+                    
+                    // ページ番号
                     const pageNumberDiv = document.createElement('div');
                     pageNumberDiv.className = 'page-number';
-                    pageNumberDiv.textContent = `${index + 1}`; // 1から始まるページ番号
+                    pageNumberDiv.textContent = `${index + 1}`;       // 1開始番号
                     
-                    // ========== DOM構造の構築 ========== 
-                    containerDiv.appendChild(textDiv);      // テキストをコンテナに追加
-                    paperDiv.appendChild(containerDiv);     // コンテナを用紙に追加
-                    paperDiv.appendChild(svgOverlay);       // SVGオーバーレイを用紙に追加
-                    paperDiv.appendChild(pageNumberDiv);    // ページ番号を用紙に追加
-                    pageDiv.appendChild(paperDiv);          // 用紙をページに追加
-                    pagesContainer.appendChild(pageDiv);    // ページをメインコンテナに追加
+                    // 
+                    // ========== DOM構造構築 ==========
+                    // 
+                    containerDiv.appendChild(textDiv);
+                    paperDiv.appendChild(containerDiv);
+                    paperDiv.appendChild(svgOverlay);
+                    paperDiv.appendChild(pageNumberDiv);
+                    pageDiv.appendChild(paperDiv);
+                    pagesContainer.appendChild(pageDiv);
                 });
             }
             
+            /* 
+            ========================================
+            ファイル操作システム
+            ========================================
+            */
+
             /**
-             * テキストを保存する関数（保存先指定対応）
+             * テキスト保存関数（モダンAPI対応）
              * 
-             * この関数は以下の順序で保存を試行します：
-             * 1. File System Access API（Chrome/Edge対応、保存先指定可能）
-             * 2. 従来のダウンロード方式（他のブラウザ用）
+             * 【保存方式】
+             * 1. File System Access API（Chrome/Edge - 保存先指定可能）
+             * 2. 従来ダウンロード方式（その他ブラウザ）
              * 
-             * @returns {Promise<void>} - 非同期処理のためPromiseを返す
+             * @returns {Promise<void>} 非同期処理
              */
             async function saveText() {
-                // エディタからテキストを取得
                 const editor = document.getElementById('editor');
                 const text = editor.value;
                 
-                // テキストが空の場合は警告
+                // 空テキストチェック
                 if (!text.trim()) {
                     showNotification('保存するテキストがありません。', 'warning');
                     return;
                 }
                 
-                // ========== ファイル名の生成（現在の日時を使用） ========== 
+                // 
+                // ========== ファイル名生成：日時ベース ==========
+                // 
                 const now = new Date();
                 const year = now.getFullYear();
                 const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -724,19 +885,21 @@
                 
                 const filename = `台本_${year}${month}${day}_${hours}${minutes}.txt`;
                 
-                // ========== File System Access APIによる保存（モダンブラウザ） ========== 
+                // 
+                // ========== モダンAPI保存試行 ==========
+                // 
                 if ('showSaveFilePicker' in window) {
                     try {
-                        // ファイル保存ダイアログを表示
+                        // ファイル保存ダイアログ
                         const fileHandle = await window.showSaveFilePicker({
-                            suggestedName: filename,           // 推奨ファイル名
+                            suggestedName: filename,
                             types: [{
                                 description: 'テキストファイル',
                                 accept: { 'text/plain': ['.txt'] }
                             }]
                         });
                         
-                        // ファイルに書き込み
+                        // ファイル書き込み
                         const writable = await fileHandle.createWritable();
                         await writable.write(text);
                         await writable.close();
@@ -745,8 +908,7 @@
                         return;
                     } catch (error) {
                         if (error.name === 'AbortError') {
-                            // ユーザーがキャンセルした場合（エラーではない）
-                            return;
+                            return;                                    // ユーザーキャンセル
                         } else {
                             console.error('保存エラー:', error);
                             showNotification('ファイル保存中にエラーが発生しました。従来の方法で保存します。', 'error');
@@ -754,16 +916,15 @@
                     }
                 }
                 
-                // ========== 従来の方法による保存（ダウンロード形式） ========== 
-                // Blobオブジェクトを作成（ファイル内容を表現）
+                // 
+                // ========== 従来方式保存 ==========
+                // 
                 const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-                
-                // ダウンロードリンクを作成
                 const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);  // Blobからダウンロード用URLを生成
-                link.download = filename;               // ダウンロード時のファイル名
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
                 
-                // 一時的にリンクをDOMに追加してクリック（自動ダウンロード）
+                // 自動ダウンロード実行
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -771,38 +932,46 @@
                 // メモリ解放
                 URL.revokeObjectURL(link.href);
                 
-                // 保存完了のメッセージ
                 showNotification(`ファイル「${filename}」がダウンロードフォルダに保存されました。`, 'success');
             }
             
+            /* 
+            ========================================
+            通知システム
+            ========================================
+            */
+
             /**
-             * 自動的に消える通知を表示する関数
+             * トースト通知表示関数
              * 
-             * 画面右上に通知メッセージを表示し、3秒後に自動で消える
+             * 【アニメーション】
+             * - 表示：右からスライドイン
+             * - 非表示：右にスライドアウト
+             * - 自動消去：3秒後
              * 
-             * @param {string} message - 表示するメッセージ
-             * @param {string} type - 通知の種類 ('success', 'warning', 'error')
+             * @param {string} message - 表示メッセージ
+             * @param {string} type - 通知種類（success/warning/error）
              */
             function showNotification(message, type = 'success') {
-                // 通知要素を作成
+                // 通知要素作成
                 const notification = document.createElement('div');
                 notification.className = `notification notification-${type}`;
                 notification.textContent = message;
                 
-                // 通知をbodyに追加
+                // DOM追加
                 document.body.appendChild(notification);
                 
-                // 0.1秒後にフェードイン効果でアニメーション開始
+                // アニメーション：フェードイン（0.1秒後）
                 setTimeout(() => {
                     notification.classList.add('show');
                 }, 100);
                 
-                // 3秒後にフェードアウト開始
+                // アニメーション：フェードアウト開始（3秒後）
                 setTimeout(() => {
                     notification.classList.add('fade-out');
                 }, 3000);
                 
-                // 4秒後に要素を完全に削除
+                // DOM削除（4秒後）
                 setTimeout(() => {
                     if (notification.parentNode) {
                         notification.parentNode.removeChild(notification);
@@ -810,65 +979,76 @@
                 }, 4000);
             }
             
-            // ========== イベントリスナーの設定 ========== 
-            
-            // エディタの内容が変更されたときにプレビューを自動更新
+            /* 
+            ========================================
+            ユーザーインタラクション
+            ========================================
+            */
+
+            // リアルタイムプレビュー更新：入力時イベント
             document.getElementById('editor').addEventListener('input', updateVerticalDisplay);
             
             /**
-             * 印刷機能
-             * ブラウザの印刷ダイアログを開く
-             * CSSの@media printによりプレビュー部分のみが印刷される
+             * 印刷実行関数
+             * 
+             * ブラウザ印刷ダイアログ起動
+             * CSS @media printによりプレビュー部分のみ印刷
              */
             function printPages() {
                 window.print();
             }
             
             /**
-             * ファイル読み込みボタンがクリックされた時の処理
-             * 隠されたファイル入力をクリックしてファイル選択ダイアログを開く
+             * ファイル読み込みトリガー関数
+             * 
+             * 隠しファイル入力要素をプログラム的にクリック
              */
             function loadText() {
                 const fileInput = document.getElementById('fileInput');
-                fileInput.click(); // 隠されたファイル入力をプログラム的にクリック
+                fileInput.click();
             }
             
             /**
-             * ファイルが選択された時の処理
-             * FileReader APIを使用してファイル内容を読み込み、エディタに表示
+             * ファイル選択処理関数
+             * 
+             * 【処理フロー】
+             * 1. ファイル形式検証
+             * 2. FileReader API使用
+             * 3. エディタに内容設定
+             * 4. プレビュー更新
              * 
              * @param {Event} event - ファイル選択イベント
              */
             function handleFileSelect(event) {
                 const file = event.target.files[0];
                 
-                // ファイルが選択されていない場合は何もしない
                 if (!file) {
-                    return;
+                    return;                                            // ファイル未選択
                 }
                 
-                // テキストファイル以外が選択された場合は警告
+                // ファイル形式検証
                 if (!file.type.includes('text') && !file.name.toLowerCase().endsWith('.txt')) {
                     showNotification('テキストファイル(.txt)を選択してください。', 'warning');
                     return;
                 }
                 
-                // ========== FileReaderを使用してファイル内容を読み込み ========== 
+                // 
+                // ========== FileReader使用ファイル読み込み ==========
+                // 
                 const reader = new FileReader();
                 
-                // ファイル読み込み成功時の処理
+                // 読み込み成功処理
                 reader.onload = function(e) {
                     try {
-                        const content = e.target.result;     // ファイル内容を取得
+                        const content = e.target.result;
                         const editor = document.getElementById('editor');
                         
-                        // エディタにファイル内容を設定
+                        // エディタ内容設定
                         editor.value = content;
                         
-                        // プレビューを更新
+                        // プレビュー更新
                         updateVerticalDisplay();
                         
-                        // 成功メッセージを表示
                         showNotification(`ファイル「${file.name}」を読み込みました。`, 'success');
                         
                     } catch (error) {
@@ -877,20 +1057,25 @@
                     }
                 };
                 
-                // ファイル読み込み失敗時の処理
+                // 読み込み失敗処理
                 reader.onerror = function() {
                     showNotification('ファイルの読み込みに失敗しました。', 'error');
                 };
                 
-                // ファイル内容をテキストとして読み込み開始
+                // UTF-8テキスト読み込み開始
                 reader.readAsText(file, 'UTF-8');
                 
-                // ファイル入力をリセット（同じファイルを再選択可能にする）
+                // ファイル入力リセット（同一ファイル再選択対応）
                 event.target.value = '';
             }
             
-            // ========== 初期化処理 ========== 
-            // ページ読み込み完了時に初期表示を実行
+            /* 
+            ========================================
+            アプリケーション初期化
+            ========================================
+            */
+
+            // 初期プレビュー表示実行
             updateVerticalDisplay();
         </script>
     </body>
