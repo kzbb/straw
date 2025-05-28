@@ -337,9 +337,16 @@
                     <div class="editor-menu-bar">
                         <div class="d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">テキストエディター</h5>
-                            <button class="btn btn-success btn-sm" onclick="saveText()">
-                                保存
-                            </button>
+                            <div>
+                                <button class="btn btn-outline-primary btn-sm me-2" onclick="loadText()">
+                                    ファイルを開く
+                                </button>
+                                <button class="btn btn-success btn-sm" onclick="saveText()">
+                                    保存
+                                </button>
+                                <!-- 非表示のファイル入力フィールド -->
+                                <input type="file" id="fileInput" accept=".txt" style="display: none;" onchange="handleFileSelect(event)">
+                            </div>
                         </div>
                     </div>
                     
@@ -731,6 +738,67 @@
              */
             function printPages() {
                 window.print();
+            }
+            
+            /**
+             * ファイル読み込みボタンがクリックされた時の処理
+             * 隠されたファイル入力をクリックしてファイル選択ダイアログを開く
+             */
+            function loadText() {
+                const fileInput = document.getElementById('fileInput');
+                fileInput.click();
+            }
+            
+            /**
+             * ファイルが選択された時の処理
+             * @param {Event} event - ファイル選択イベント
+             */
+            function handleFileSelect(event) {
+                const file = event.target.files[0];
+                
+                // ファイルが選択されていない場合は何もしない
+                if (!file) {
+                    return;
+                }
+                
+                // テキストファイル以外が選択された場合は警告
+                if (!file.type.includes('text') && !file.name.toLowerCase().endsWith('.txt')) {
+                    showNotification('テキストファイル(.txt)を選択してください。', 'warning');
+                    return;
+                }
+                
+                // FileReaderを使用してファイル内容を読み込み
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        const content = e.target.result;
+                        const editor = document.getElementById('editor');
+                        
+                        // エディタにファイル内容を設定
+                        editor.value = content;
+                        
+                        // プレビューを更新
+                        updateVerticalDisplay();
+                        
+                        // 成功メッセージを表示
+                        showNotification(`ファイル「${file.name}」を読み込みました。`, 'success');
+                        
+                    } catch (error) {
+                        console.error('ファイル読み込みエラー:', error);
+                        showNotification('ファイルの読み込み中にエラーが発生しました。', 'error');
+                    }
+                };
+                
+                reader.onerror = function() {
+                    showNotification('ファイルの読み込みに失敗しました。', 'error');
+                };
+                
+                // ファイル内容をテキストとして読み込み開始
+                reader.readAsText(file, 'UTF-8');
+                
+                // ファイル入力をリセット（同じファイルを再選択可能にする）
+                event.target.value = '';
             }
             
             // ページ読み込み完了時に初期表示を実行
