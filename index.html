@@ -401,6 +401,15 @@
                                 <strong>用紙、余白、倍率など、適宜調整してください。</strong><br>
                             </small>
                         </div>
+
+                        <!-- ファイル保存の説明 -->
+                        <div class="mb-4">
+                            <h6 class="text-primary">テキスト保存</h6>
+                            <small class="text-muted">
+                                ショートカットキーは、<strong>Ctrl + S</strong>（Win）<strong>Cmd + S</strong>（Mac）です。<br>
+                                Chrome・Edgeでは開いたファイルへの上書き保存が可能です。
+                            </small>
+                        </div>
                         
                         <!-- バージョン情報 -->
                         <div class="mt-5 pt-3 border-top">
@@ -437,8 +446,11 @@
                                 <button class="btn btn-outline-primary btn-sm me-2" onclick="loadText()">
                                     ファイルを開く
                                 </button>
-                                <button class="btn btn-success btn-sm" onclick="saveText()">
+                                <button class="btn btn-success btn-sm me-1" onclick="saveText()">
                                     保存
+                                </button>
+                                <button class="btn btn-outline-success btn-sm" onclick="saveAsText()">
+                                    名前を付けて保存
                                 </button>
                                 <!-- 隠しファイル入力要素（プログラムからトリガー） -->
                                 <input type="file" id="fileInput" accept=".txt" style="display: none;" onchange="handleFileSelect(event)">
@@ -871,34 +883,34 @@
              * 
              * @returns {Promise<void>} 非同期処理
              */
-            async function saveText() {
+            let currentFileHandle = null;
+            let currentFileName = null;
+
+            async function saveText(forceNewFile = false) {
                 const editor = document.getElementById('editor');
                 const text = editor.value;
                 
-                // 空テキストチェック
                 if (!text.trim()) {
                     showNotification('保存するテキストがありません。', 'warning');
                     return;
                 }
                 
-                // 
-                // ========== ファイル名生成：日時ベース ==========
-                // 
-                const now = new Date();
-                const year = now.getFullYear();
-                const month = String(now.getMonth() + 1).padStart(2, '0');
-                const day = String(now.getDate()).padStart(2, '0');
-                const hours = String(now.getHours()).padStart(2, '0');
-                const minutes = String(now.getMinutes()).padStart(2, '0');
-                
-                const filename = `台本_${year}${month}${day}_${hours}${minutes}.txt`;
-                
-                // 
-                // ========== モダンAPI保存試行 ==========
-                // 
+                // File System Access API対応ブラウザでの処理
                 if ('showSaveFilePicker' in window) {
                     try {
-                        // ファイル保存ダイアログ
+                        // 上書き保存：既存ファイルがある && 新規保存を強制しない場合
+                        if (currentFileHandle && !forceNewFile) {
+                            const writable = await currentFileHandle.createWritable();
+                            await writable.write(text);
+                            await writable.close();
+                            showNotification(`「${currentFileName}」を上書き保存しました。`, 'success');
+                            return;
+                        }
+                        
+                        // 新規保存（名前を付けて保存）
+                        const now = new Date();
+                        const filename = `台本_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.txt`;
+                        
                         const fileHandle = await window.showSaveFilePicker({
                             suggestedName: filename,
                             types: [{
@@ -907,26 +919,24 @@
                             }]
                         });
                         
-                        // ファイル書き込み
                         const writable = await fileHandle.createWritable();
                         await writable.write(text);
                         await writable.close();
                         
-                        showNotification('ファイルが正常に保存されました。', 'success');
+                        // ファイルハンドルと名前を保存
+                        currentFileHandle = fileHandle;
+                        currentFileName = fileHandle.name;
+                        
+                        showNotification(`「${currentFileName}」を保存しました。`, 'success');
                         return;
+                        
                     } catch (error) {
-                        if (error.name === 'AbortError') {
-                            return;                                    // ユーザーキャンセル
-                        } else {
-                            console.error('保存エラー:', error);
-                            showNotification('ファイル保存中にエラーが発生しました。従来の方法で保存します。', 'error');
-                        }
+                        if (error.name === 'AbortError') return;
+                        console.error('保存エラー:', error);
                     }
                 }
                 
-                // 
-                // ========== 従来方式保存 ==========
-                // 
+                // 従来方式（上書き保存不可）
                 const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
@@ -941,6 +951,20 @@
                 URL.revokeObjectURL(link.href);
                 
                 showNotification(`ファイル「${filename}」がダウンロードフォルダに保存されました。`, 'success');
+            }
+            
+            /**
+             * テキスト名前を付けて保存関数
+             * 
+             * 【処理フロー】
+             * 1. エディタテキスト取得
+             * 2. ファイル名入力ダイアログ表示
+             * 3. テキストファイルとして保存
+             * 
+             * @returns {Promise<void>} 非同期処理
+             */
+            async function saveAsText() {
+                await saveText(true); // 強制的に新規保存
             }
             
             /* 
@@ -1009,15 +1033,47 @@
             /**
              * ファイル読み込みトリガー関数
              * 
-             * 隠しファイル入力要素をプログラム的にクリック
+             * File System Access API対応ブラウザでは直接ファイルを開き、
+             * その他のブラウザでは隠しファイル入力要素を使用
              */
-            function loadText() {
-                const fileInput = document.getElementById('fileInput');
-                fileInput.click();
+            async function loadText() {
+                // File System Access API対応ブラウザでの処理
+                if ('showOpenFilePicker' in window) {
+                    try {
+                        const [fileHandle] = await window.showOpenFilePicker({
+                            types: [{
+                                description: 'テキストファイル',
+                                accept: { 'text/plain': ['.txt'] }
+                            }]
+                        });
+                        
+                        const file = await fileHandle.getFile();
+                        const content = await file.text();
+                        
+                        const editor = document.getElementById('editor');
+                        editor.value = content;
+                        updateVerticalDisplay();
+                        
+                        // ファイルハンドルを保存（上書き保存用）
+                        currentFileHandle = fileHandle;
+                        currentFileName = fileHandle.name;
+                        
+                        showNotification(`ファイル「${fileHandle.name}」を読み込みました。`, 'success');
+                        
+                    } catch (error) {
+                        if (error.name === 'AbortError') return; // ユーザーキャンセル
+                        console.error('ファイル読み込みエラー:', error);
+                        showNotification('ファイルの読み込みに失敗しました。', 'error');
+                    }
+                } else {
+                    // 従来方式：隠しファイル入力要素を使用
+                    const fileInput = document.getElementById('fileInput');
+                    fileInput.click();
+                }
             }
             
             /**
-             * ファイル選択処理関数
+             * ファイル選択処理関数（従来方式用）
              * 
              * 【処理フロー】
              * 1. ファイル形式検証
@@ -1050,15 +1106,14 @@
                     try {
                         const content = e.target.result;
                         const editor = document.getElementById('editor');
-                        
-                        // エディタ内容設定
                         editor.value = content;
-                        
-                        // プレビュー更新
                         updateVerticalDisplay();
                         
-                        showNotification(`ファイル「${file.name}」を読み込みました。`, 'success');
+                        // 従来方式ではファイルハンドルは取得できないため、リセット
+                        currentFileHandle = null;
+                        currentFileName = file.name;
                         
+                        showNotification(`ファイル「${file.name}」を読み込みました。`, 'success');
                     } catch (error) {
                         console.error('ファイル読み込みエラー:', error);
                         showNotification('ファイルの読み込み中にエラーが発生しました。', 'error');
@@ -1085,6 +1140,15 @@
 
             // 初期プレビュー表示実行
             updateVerticalDisplay();
+
+            // キーボードショートカット（Cmd+S）でファイル保存
+            document.addEventListener('keydown', function(event) {
+                // Macの場合：Cmd+S、WindowsLinuxの場合：Ctrl+S
+                if ((event.metaKey || event.ctrlKey) && event.key === 's') {
+                    event.preventDefault(); // ブラウザのデフォルト保存動作を無効化
+                    saveText(); // 既存の保存関数を呼び出し
+                }
+            });
         </script>
     </body>
 </html>
