@@ -335,7 +335,7 @@
             */
             
             /* 柱書スタイル */
-            .chapter-line {
+            .scene-line {
                 color: #000;
                 display: block;
                 margin-bottom: 0;
@@ -785,7 +785,7 @@
              * 
              * @param {string} text - 入力テキスト（改行区切り）
              * @returns {Array<Array<Object>>} ページ配列（各ページは行オブジェクトの配列）
-             *   行オブジェクト形式：{ text: string, isChapter: boolean }
+             *   行オブジェクト形式：{ text: string, isScene: boolean }
              */
             function formatVerticalTextToPages(text) {
                 // 
@@ -795,7 +795,7 @@
                 const maxCharsPerLine = 29;             // 1行最大文字数
                 const lines = text.split('\n');        // 入力を行単位に分割
                 let allFormattedLines = [];             // 整形後全行格納配列
-                let chapterNumber = 1;                  // 柱書連番カウンタ
+                let sceneNumber = 1;                  // 柱書連番カウンタ
                 
                 // 
                 // ========== 日本語禁則処理設定 ==========
@@ -858,7 +858,7 @@
                 for (let line of lines) {
                     // 空行処理：そのまま追加
                     if (line.length === 0) {
-                        allFormattedLines.push({ text: '', isChapter: false });
+                        allFormattedLines.push({ text: '', isScene: false });
                         continue;
                     }
                     
@@ -868,25 +868,25 @@
                     // 
                     if (line.trim().match(/^[◯○◎◇□＊☆]/)) {
                         // 番号変換：記号 → "  1 "形式（3桁+空白）
-                        const chapterNumber3Digits = String(chapterNumber).padStart(3, ' ') + ' ';
-                        const chapterText = line.replace(/^\s*[◯○◎◇□＊☆]/, chapterNumber3Digits);
-                        chapterNumber++;                               // 連番インクリメント
+                        const sceneNumber3Digits = String(sceneNumber).padStart(3, ' ') + ' ';
+                        const sceneText = line.replace(/^\s*[◯○◎◇□＊☆]/, sceneNumber3Digits);
+                        sceneNumber++;                               // 連番インクリメント
                         
                         // 柱書の折り返し処理
-                        const indentMatch = chapterText.match(/^(\s*)/);
+                        const indentMatch = sceneText.match(/^(\s*)/);
                         const baseIndent = indentMatch ? indentMatch[1] : '';
                         
-                        if (chapterText.length <= maxCharsPerLine) {
+                        if (sceneText.length <= maxCharsPerLine) {
                             // 1行以内：そのまま追加
-                            allFormattedLines.push({ text: chapterText, isChapter: true });
+                            allFormattedLines.push({ text: sceneText, isScene: true });
                         } else {
                             // 折り返し必要：分割処理
-                            const firstLineBreak = findBreakPoint(chapterText, maxCharsPerLine);
-                            const firstLine = chapterText.substring(0, firstLineBreak);
-                            allFormattedLines.push({ text: firstLine, isChapter: true });
+                            const firstLineBreak = findBreakPoint(sceneText, maxCharsPerLine);
+                            const firstLine = sceneText.substring(0, firstLineBreak);
+                            allFormattedLines.push({ text: firstLine, isScene: true });
                             
                             // 残りテキスト処理
-                            let remainingText = chapterText.substring(firstLineBreak);
+                            let remainingText = sceneText.substring(firstLineBreak);
                             
                             while (remainingText.length > 0) {
                                 const availableSpace = maxCharsPerLine - baseIndent.length;
@@ -894,16 +894,16 @@
                                 if (availableSpace <= 0) {
                                     // インデント過大：強制切断
                                     const breakPoint = findBreakPoint(remainingText, maxCharsPerLine);
-                                    allFormattedLines.push({ text: remainingText.substring(0, breakPoint), isChapter: true });
+                                    allFormattedLines.push({ text: remainingText.substring(0, breakPoint), isScene: true });
                                     remainingText = remainingText.substring(breakPoint);
                                 } else if (remainingText.length <= availableSpace) {
                                     // 残り全部収まる：完了
-                                    allFormattedLines.push({ text: baseIndent + remainingText, isChapter: true });
+                                    allFormattedLines.push({ text: baseIndent + remainingText, isScene: true });
                                     break;
                                 } else {
                                     // 分割継続
                                     const breakPoint = findBreakPoint(remainingText, availableSpace);
-                                    allFormattedLines.push({ text: baseIndent + remainingText.substring(0, breakPoint), isChapter: true });
+                                    allFormattedLines.push({ text: baseIndent + remainingText.substring(0, breakPoint), isScene: true });
                                     remainingText = remainingText.substring(breakPoint);
                                 }
                             }
@@ -921,7 +921,7 @@
                     
                     if (line.length <= maxCharsPerLine) {
                         // 1行以内：そのまま追加
-                        allFormattedLines.push({ text: line, isChapter: false });
+                        allFormattedLines.push({ text: line, isScene: false });
                     } else {
                         // 
                         // ========== 29文字超過：自動折り返し処理 ==========
@@ -930,7 +930,7 @@
                         // 第1行の改行位置決定
                         const firstLineBreak = findBreakPoint(line, maxCharsPerLine);
                         const firstLine = line.substring(0, firstLineBreak);
-                        allFormattedLines.push({ text: firstLine, isChapter: false });
+                        allFormattedLines.push({ text: firstLine, isScene: false });
                         
                         // セリフ行判定：元行全体でカギカッコ終了チェック
                         const originalLineEndsWithQuote = line.trim().endsWith('」') || line.trim().endsWith('』');
@@ -957,16 +957,16 @@
                             if (availableSpace <= 0) {
                                 // インデント過大：強制切断
                                 const breakPoint = findBreakPoint(remainingText, maxCharsPerLine);
-                                allFormattedLines.push({ text: remainingText.substring(0, breakPoint), isChapter: false });
+                                allFormattedLines.push({ text: remainingText.substring(0, breakPoint), isScene: false });
                                 remainingText = remainingText.substring(breakPoint);
                             } else if (remainingText.length <= availableSpace) {
                                 // 残り全部収まる：完了
-                                allFormattedLines.push({ text: currentIndent + remainingText, isChapter: false });
+                                allFormattedLines.push({ text: currentIndent + remainingText, isScene: false });
                                 break;
                             } else {
                                 // 分割継続
                                 const breakPoint = findBreakPoint(remainingText, availableSpace);
-                                allFormattedLines.push({ text: currentIndent + remainingText.substring(0, breakPoint), isChapter: false });
+                                allFormattedLines.push({ text: currentIndent + remainingText.substring(0, breakPoint), isScene: false });
                                 remainingText = remainingText.substring(breakPoint);
                             }
                         }
@@ -983,13 +983,13 @@
 
                 for (let lineObj of allFormattedLines) {
                     // 行重み計算：柱書1.8行、通常行1行
-                    const lineWeight = lineObj.isChapter ? 1.8 : 1;
+                    const lineWeight = lineObj.isScene ? 1.8 : 1;
                     
                     // ページ容量チェック：17行超過判定
                     if (currentLineCount + lineWeight > maxLines && currentPage.length > 0) {
                         // 現ページを17行で埋めて確定
                         while (Math.ceil(currentLineCount) < maxLines) {
-                            currentPage.push({ text: '', isChapter: false });
+                            currentPage.push({ text: '', isScene: false });
                             currentLineCount += 1;
                         }
                         
@@ -1007,7 +1007,7 @@
                 if (currentPage.length > 0) {
                     // 17行まで空行で埋める
                     while (Math.ceil(currentLineCount) < maxLines) {
-                        currentPage.push({ text: '', isChapter: false });
+                        currentPage.push({ text: '', isScene: false });
                         currentLineCount += 1;
                     }
                     pages.push(currentPage);
@@ -1017,7 +1017,7 @@
                 if (pages.length === 0) {
                     const emptyPage = [];
                     for (let i = 0; i < maxLines; i++) {
-                        emptyPage.push({ text: '', isChapter: false });
+                        emptyPage.push({ text: '', isScene: false });
                     }
                     pages.push(emptyPage);
                 }
@@ -1100,11 +1100,11 @@
                     
                     // 各行のHTML要素生成
                     pageLines.forEach((lineObj, lineIndex) => {
-                        if (lineObj.isChapter) {
+                        if (lineObj.isScene) {
                             // 柱書：div要素使用（特別スタイル適用）
                             const lineDiv = document.createElement('div');
                             lineDiv.textContent = lineObj.text;
-                            lineDiv.classList.add('chapter-line');
+                            lineDiv.classList.add('scene-line');
                             textDiv.appendChild(lineDiv);
                         } else {
                             // 通常行：span要素使用
