@@ -64,6 +64,129 @@
                 overflow-y: auto;
                 box-sizing: border-box;
             }
+
+            /* 
+            ========================================
+            2.1. ハンバーガーメニューシステム
+            ========================================
+            */
+            
+            /* ハンバーガーボタン */
+            .hamburger-menu {
+                display: none;
+                position: fixed;
+                top: 20px;
+                left: 20px;
+                z-index: 1100;
+                background-color: #fff;
+                border: 1px solid #dee2e6;
+                border-radius: 5px;
+                padding: 8px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                cursor: pointer;
+            }
+
+            .hamburger-icon {
+                width: 20px;
+                height: 20px;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+            }
+
+            .hamburger-line {
+                width: 100%;
+                height: 2px;
+                background-color: #333;
+                transition: all 0.3s ease;
+            }
+
+            /* ハンバーガーアイコンアニメーション（開いた状態） */
+            .hamburger-menu.active .hamburger-line:nth-child(1) {
+                transform: rotate(45deg) translate(6px, 6px);
+            }
+
+            .hamburger-menu.active .hamburger-line:nth-child(2) {
+                opacity: 0;
+            }
+
+            .hamburger-menu.active .hamburger-line:nth-child(3) {
+                transform: rotate(-45deg) translate(6px, -6px);
+            }
+
+            /* サイドバーオーバーレイ */
+            .sidebar-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0,0,0,0.5);
+                z-index: 1050;
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+            }
+
+            .sidebar-overlay.active {
+                opacity: 1;
+                visibility: visible;
+            }
+
+            /* モバイルサイドバー */
+            .mobile-sidebar {
+                position: fixed;
+                top: 0;
+                left: -100%;
+                width: 300px;
+                height: 100%;
+                background-color: #f8f9fa;
+                border-right: 1px solid #dee2e6;
+                z-index: 1060;
+                transition: left 0.3s ease;
+                overflow-y: auto;
+            }
+
+            .mobile-sidebar.active {
+                left: 0;
+            }
+
+            .mobile-sidebar .column-content {
+                height: auto;
+                min-height: 100vh;
+            }
+
+            /* レスポンシブ設定 */
+            @media (max-width: 767.98px) {
+                .hamburger-menu {
+                    display: block;
+                }
+
+                .left-column {
+                    display: none;
+                }
+
+                .center-column {
+                    padding-left: 0;
+                }
+
+                .right-column {
+                    border-left: none;
+                }
+
+                /* モバイル時の右カラム調整 */
+                .right-column .column-content {
+                    padding-top: 80px; /* ハンバーガーメニューの下に配置 */
+                }
+            }
+
+            @media (min-width: 768px) {
+                .hamburger-menu,
+                .sidebar-overlay,
+                .mobile-sidebar {
+                    display: none !important;
+                }
+            }
             
             /* 
             ========================================
@@ -80,6 +203,23 @@
                 top: 0;
                 z-index: 10;
                 box-sizing: border-box;
+            }
+
+            /* モバイル時のエディターメニューバー調整 */
+            @media (max-width: 767.98px) {
+                .editor-menu-bar {
+                    padding-left: 60px; /* ハンバーガーボタン分のスペース確保 */
+                    padding-top: 60px; /* ハンバーガーメニューの下に配置 */
+                }
+
+                .editor-menu-bar h5 {
+                    font-size: 1rem; /* モバイルでタイトルサイズ調整 */
+                }
+
+                .editor-menu-bar .btn {
+                    font-size: 0.8rem; /* ボタンサイズ調整 */
+                    padding: 0.25rem 0.5rem;
+                }
             }
             
             .editor-container {
@@ -318,6 +458,125 @@
     </head>
     
     <body>
+        <!-- ハンバーガーメニューボタン -->
+        <div class="hamburger-menu" id="hamburgerMenu">
+            <div class="hamburger-icon">
+                <div class="hamburger-line"></div>
+                <div class="hamburger-line"></div>
+                <div class="hamburger-line"></div>
+            </div>
+        </div>
+
+        <!-- サイドバーオーバーレイ -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+        <!-- モバイルサイドバー -->
+        <div class="mobile-sidebar" id="mobileSidebar">
+            <div class="column-content">
+                <h5>使い方</h5>
+                
+                <!-- 推奨環境 -->
+                <div class="mb-4">
+                    <h6 class="text-primary">推奨環境</h6>
+                    <small class="text-muted">
+                        Chrome または Edge<br>
+                        Firefox、Safariでは、印刷時にレイアウトが崩れる場合があります。
+                    </small>
+                </div>
+                
+                <!-- 基本操作説明 -->
+                <div class="mb-4">
+                    <h6 class="text-primary">基本操作</h6>
+                    <small class="text-muted">
+                        中央のエディターにテキストを入力すると、右側にB5縦書きプレビューが表示されます。
+                    </small>
+                </div>
+                
+                <!-- 柱書機能説明 -->
+                <div class="mb-4">
+                    <h6 class="text-primary">柱書</h6>
+                    <small class="text-muted">
+                        行頭に「◯○◎◇□＊☆」のいずれかを入力すると柱書として認識され、プレビューでは自動的に番号が振られます。
+                    </small>
+                </div>
+
+                <!-- ト書き機能説明 -->
+                <div class="mb-4">
+                    <h6 class="text-primary">ト書き</h6>
+                    <small class="text-muted">
+                        ト書きとしてインデント（字下げ）をするときは、行頭にスペースを入れて調整してください（３～６文字を推奨）。折り返し部分にも自動適用されます。
+                    </small>
+                </div>
+
+                <!-- セリフ行機能説明 -->
+                <div class="mb-4">
+                    <h6 class="text-primary">セリフ行</h6>
+                    <small class="text-muted">
+                        カギカッコ「」で終わる行はセリフ行として、折り返し部分に4文字のインデントが自動適用されます。
+                    </small>
+                </div>
+                
+                <!-- レイアウト仕様説明 -->
+                <div class="mb-4">
+                    <h6 class="text-primary">レイアウト</h6>
+                    <small class="text-muted">
+                        • 1ページ：17行<br>
+                        • 1行：29文字<br>
+                        • 自動改ページ<br>
+                        • 日本語禁則処理対応
+                    </small>
+                </div>
+                
+                <!-- 印刷機能説明 -->
+                <div class="mb-4">
+                    <h6 class="text-primary">印刷</h6>
+                    <small class="text-muted">
+                        右上の「印刷」ボタンでB5サイズの縦書き原稿として印刷できます。<br>
+                        <strong>印刷設定：</strong><br>
+                        • 用紙サイズ：B5<br>
+                        • 向き：縦<br>
+                        • 余白：25mm（上）、9mm（左右）、0mm（下）<br>
+                        <strong>用紙、余白、倍率など、適宜調整してください。</strong><br>
+                    </small>
+                </div>
+
+                <!-- ファイル保存の説明 -->
+                <div class="mb-4">
+                    <h6 class="text-primary">テキスト保存</h6>
+                    <small class="text-muted">
+                        ショートカットキーは、<strong>Ctrl + S</strong>（Win）<strong>Cmd + S</strong>（Mac）です。<br>
+                        Chrome・Edgeでは開いたファイルへの上書き保存が可能です。
+                    </small>
+                </div>
+                
+                <!-- バージョン情報 -->
+                <div class="mt-5 pt-3 border-top">
+                    <small class="text-muted">
+                        <strong>縦書き台本整形ツール<br></strong>
+                        ver.25.5.29
+                    </small>
+                </div>
+                
+                <!-- GitHubリンク -->
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <a href="https://github.com/kzbb/straw" target="_blank" class="text-decoration-none text-primary">
+                            README (GitHub)
+                        </a>
+                    </small>
+                </div>
+
+                <!-- フィードバックフォームリンク -->
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <a href="https://docs.google.com/forms/d/e/1FAIpQLSeJ1db2A8czL_-DNfx0srZvzYDZ1poMQXANdVSJiEIJyFhUtA/viewform?usp=header" target="_blank" class="text-decoration-none text-primary">
+                            フィードバックフォーム
+                        </a>
+                    </small>
+                </div>
+            </div>
+        </div>
+
         <!-- 
         ========================================
         メインアプリケーション構造
@@ -1211,12 +1470,96 @@
             
             /* 
             ========================================
+            ハンバーガーメニュー制御
+            ========================================
+            */
+
+            /**
+             * ハンバーガーメニュー初期化
+             */
+            function initHamburgerMenu() {
+                const hamburgerMenu = document.getElementById('hamburgerMenu');
+                const sidebarOverlay = document.getElementById('sidebarOverlay');
+                const mobileSidebar = document.getElementById('mobileSidebar');
+
+                // ハンバーガーボタンクリック
+                hamburgerMenu.addEventListener('click', function() {
+                    toggleSidebar();
+                });
+
+                // オーバーレイクリックで閉じる
+                sidebarOverlay.addEventListener('click', function() {
+                    closeSidebar();
+                });
+
+                // ESCキーで閉じる
+                document.addEventListener('keydown', function(event) {
+                    if (event.key === 'Escape') {
+                        closeSidebar();
+                    }
+                });
+            }
+
+            /**
+             * サイドバーの開閉切り替え
+             */
+            function toggleSidebar() {
+                const hamburgerMenu = document.getElementById('hamburgerMenu');
+                const sidebarOverlay = document.getElementById('sidebarOverlay');
+                const mobileSidebar = document.getElementById('mobileSidebar');
+
+                const isActive = hamburgerMenu.classList.contains('active');
+
+                if (isActive) {
+                    closeSidebar();
+                } else {
+                    openSidebar();
+                }
+            }
+
+            /**
+             * サイドバーを開く
+             */
+            function openSidebar() {
+                const hamburgerMenu = document.getElementById('hamburgerMenu');
+                const sidebarOverlay = document.getElementById('sidebarOverlay');
+                const mobileSidebar = document.getElementById('mobileSidebar');
+
+                hamburgerMenu.classList.add('active');
+                sidebarOverlay.classList.add('active');
+                mobileSidebar.classList.add('active');
+
+                // ボディのスクロールを無効化
+                document.body.style.overflow = 'hidden';
+            }
+
+            /**
+             * サイドバーを閉じる
+             */
+            function closeSidebar() {
+                const hamburgerMenu = document.getElementById('hamburgerMenu');
+                const sidebarOverlay = document.getElementById('sidebarOverlay');
+                const mobileSidebar = document.getElementById('mobileSidebar');
+
+                hamburgerMenu.classList.remove('active');
+                sidebarOverlay.classList.remove('active');
+                mobileSidebar.classList.remove('active');
+
+                // ボディのスクロールを復元
+                document.body.style.overflow = '';
+            }
+
+            /* 
+            ========================================
             アプリケーション初期化
             ========================================
             */
 
             // 初期プレビュー表示実行
             updateVerticalDisplay();
+
+            // ハンバーガーメニュー初期化
+            initHamburgerMenu();
 
             // キーボードショートカット（Cmd+S）でファイル保存
             document.addEventListener('keydown', function(event) {
