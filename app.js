@@ -350,7 +350,7 @@ function updateVerticalDisplay() {
     pages.forEach((pageLines, index) => {
         // ページ全体コンテナ
         const pageDiv = document.createElement('div');
-        pageDiv.className = 'mb-4'; // Bootstrap下部マージン
+        pageDiv.className = 'mb-4'; // ページ間マージン
 
         // B5用紙コンテナ
         const paperDiv = document.createElement('div');
