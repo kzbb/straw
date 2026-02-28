@@ -1,0 +1,417 @@
+/* 
+========================================
+1. 基本設定・リセット
+========================================
+*/
+
+/* ブラウザデフォルトリセット */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    min-width: 768px; /* iPad mini横向き未満で横スクロール */
+}
+
+/* 画面全体の最小幅をiPad mini横向き(768px)に固定 */
+.container-fluid {
+    min-width: 768px;
+}
+
+/* 全画面高さユーティリティ */
+.full-height {
+    height: 100vh;
+}
+
+/* 
+========================================
+2. レイアウトシステム（3カラム構成）
+========================================
+*/
+
+/* カラム背景・境界線 */
+.left-column,
+.right-column {
+    background-color: #f8f9fa;
+}
+
+.left-column {
+    border-right: 1px solid #dee2e6;
+}
+
+.center-column {
+    background-color: #fff;
+    padding: 0;
+}
+
+.right-column {
+    border-left: 1px solid #dee2e6;
+}
+
+/* カラム内コンテンツ共通 */
+.column-content {
+    padding: 20px;
+    height: 100vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+/* 
+========================================
+2.1. ハンバーガーメニューシステム
+========================================
+*/
+
+/* ハンバーガーボタン */
+.hamburger-menu {
+    display: none;
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1100;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    cursor: pointer;
+}
+
+.hamburger-icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.hamburger-line {
+    width: 100%;
+    height: 2px;
+    background-color: #333;
+    transition: all 0.3s ease;
+}
+
+/* ハンバーガーアイコンアニメーション（開いた状態） */
+.hamburger-menu.active .hamburger-line:nth-child(1) {
+    transform: rotate(45deg) translate(6px, 6px);
+}
+
+.hamburger-menu.active .hamburger-line:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger-menu.active .hamburger-line:nth-child(3) {
+    transform: rotate(-45deg) translate(6px, -6px);
+}
+
+/* サイドバーオーバーレイ */
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 1050;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.sidebar-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* モバイルサイドバー */
+.mobile-sidebar {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 300px;
+    height: 100%;
+    background-color: #f8f9fa;
+    border-right: 1px solid #dee2e6;
+    z-index: 1060;
+    transition: left 0.3s ease;
+    overflow-y: auto;
+}
+
+.mobile-sidebar.active {
+    left: 0;
+}
+
+.mobile-sidebar .column-content {
+    height: auto;
+    min-height: 100vh;
+}
+
+/* レスポンシブ設定 */
+/* レスポンシブ設定は廃止（常に横並び） */
+
+/* 
+========================================
+3. テキストエディターコンポーネント
+========================================
+*/
+
+/* エディター構造 */
+.editor-menu-bar {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    padding: 15px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-sizing: border-box;
+}
+
+/* モバイル時のエディターメニューバー調整 */
+@media (max-width: 767.98px) {
+    .editor-menu-bar {
+        padding-left: 60px; /* ハンバーガーボタン分のスペース確保 */
+        padding-top: 60px; /* ハンバーガーメニューの下に配置 */
+    }
+
+    .editor-menu-bar h5 {
+        font-size: 1rem; /* モバイルでタイトルサイズ調整 */
+    }
+
+    .editor-menu-bar .btn {
+        font-size: 0.8rem; /* ボタンサイズ調整 */
+        padding: 0.25rem 0.5rem;
+    }
+}
+
+.editor-container {
+    height: calc(100% - 60px);
+    position: relative;
+}
+
+/* エディター入力エリア */
+.code-editor {
+    /* サイズ・配置 */
+    width: 100%;
+    height: 100%;
+    padding: 20px;
+    margin: 0;
+    box-sizing: border-box;
+
+    /* 表示・動作 */
+    border: none;
+    outline: none;
+    resize: none;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+
+    /* 外観 */
+    background-color: #fff;
+    color: #333;
+    font-family: 'Courier New', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.code-editor::placeholder {
+    color: #888;
+    font-style: italic;
+}
+
+.code-editor:focus {
+    background-color: #fff;
+}
+
+/* 
+========================================
+4. 縦書き表示システム
+========================================
+*/
+
+/* B5用紙コンテナ */
+.b5-paper {
+    width: 400px;
+    height: 560px;
+    margin: 0 auto 20px auto;
+    background-color: #ffffff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: relative;
+}
+
+/* 縦書きテキストコンテナ */
+.vertical-text-container {
+    height: 100%;
+    width: 100%;
+    background-color: #ffffff;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+    overflow: hidden;
+    position: relative;
+}
+
+/* 縦書きテキスト本体 */
+.vertical-text {
+    /* 縦書き設定 */
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+
+    /* 配置・サイズ */
+    position: absolute;
+    right: 15px;
+    top: calc(15px + 151px - 5em);
+    width: calc(100% - 30px);
+    height: calc(100% - 30px - 151px + 5em);
+    padding-top: 5em;
+
+    /* 表示設定 */
+    overflow: visible;
+    white-space: pre-wrap;
+    border: none;
+    outline: none;
+    resize: none;
+    box-sizing: border-box;
+
+    /* フォント・文字 */
+    font-family: 'MS Mincho', 'Yu Mincho', 'Hiragino Mincho ProN', serif;
+    font-size: 12px;
+    line-height: 1.8;
+    color: #333;
+}
+
+/* ページ番号 */
+.page-number {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: #666;
+}
+
+/* 
+========================================
+5. 台本専用要素
+========================================
+*/
+
+/* 柱書スタイル */
+.scene-line {
+    color: #000;
+    display: block;
+    margin-bottom: 0;
+    position: relative;
+    top: -5em;
+    border: #000 1px solid;
+    border-bottom: none;
+    margin-left: 0.5em;
+    margin-right: 0.5em;
+    height: calc(29em + 5em);
+}
+
+/* 
+========================================
+6. 通知システム
+========================================
+*/
+
+/* 通知ベース */
+.notification {
+    /* 配置 */
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+
+    /* サイズ・外観 */
+    padding: 15px 20px;
+    max-width: 300px;
+    border-radius: 5px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+
+    /* 文字 */
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+
+    /* アニメーション */
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease-in-out;
+}
+
+/* 通知状態 */
+.notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.notification.fade-out {
+    opacity: 0;
+    transform: translateX(100%);
+}
+
+/* 通知種類別カラー */
+.notification-success {
+    background-color: #28a745;
+}
+
+.notification-warning {
+    background-color: #ffc107;
+    color: #333;
+}
+
+.notification-error {
+    background-color: #dc3545;
+}
+
+/* 
+========================================
+7. 印刷専用スタイル
+========================================
+*/
+
+@media print {
+    /* B5縦書き印刷設定 */
+    @page {
+        size: B5 portrait; /* B5縦書き */
+        margin: 25mm 9mm 0mm 9mm; /* ページマージン */
+    }
+
+    /* 印刷対象以外を非表示 */
+    * {
+        visibility: hidden;
+    }
+
+    #pages-container,
+    #pages-container * {
+        visibility: visible;
+    }
+
+    /* 印刷レイアウト調整 */
+    #pages-container {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        transform: scale(2.28);
+        transform-origin: top left;
+    }
+
+    .b5-paper {
+        page-break-after: always;
+        margin: 0 0 20px 0;
+        max-width: none;
+        width: 400px;
+        height: 560px;
+        box-shadow: none;
+    }
+
+    .vertical-text-container {
+        border: none;
+    }
+
+    .page-number {
+        display: block;
+        visibility: visible;
+    }
+}
