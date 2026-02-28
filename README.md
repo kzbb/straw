@@ -64,6 +64,6 @@ Chrome・Edgeでは開いたファイルへの上書き保存が可能です。
 ---
 
 **縦書き台本整形ツール**  
-ver.25.7.5
+ver.26.2.28
 
 [GitHub](https://github.com/kzbb/straw)
