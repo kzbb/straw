@@ -57,101 +57,7 @@ html, body {
 
 /* 
 ========================================
-2.1. ハンバーガーメニューシステム
-========================================
-*/
-
-/* ハンバーガーボタン */
-.hamburger-menu {
-    display: none;
-    position: fixed;
-    top: 20px;
-    left: 20px;
-    z-index: 1100;
-    background-color: #fff;
-    border: 1px solid #dee2e6;
-    border-radius: 5px;
-    padding: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    cursor: pointer;
-}
-
-.hamburger-icon {
-    width: 20px;
-    height: 20px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-.hamburger-line {
-    width: 100%;
-    height: 2px;
-    background-color: #333;
-    transition: all 0.3s ease;
-}
-
-/* ハンバーガーアイコンアニメーション（開いた状態） */
-.hamburger-menu.active .hamburger-line:nth-child(1) {
-    transform: rotate(45deg) translate(6px, 6px);
-}
-
-.hamburger-menu.active .hamburger-line:nth-child(2) {
-    opacity: 0;
-}
-
-.hamburger-menu.active .hamburger-line:nth-child(3) {
-    transform: rotate(-45deg) translate(6px, -6px);
-}
-
-/* サイドバーオーバーレイ */
-.sidebar-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5);
-    z-index: 1050;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s ease;
-}
-
-.sidebar-overlay.active {
-    opacity: 1;
-    visibility: visible;
-}
-
-/* モバイルサイドバー */
-.mobile-sidebar {
-    position: fixed;
-    top: 0;
-    left: -100%;
-    width: 300px;
-    height: 100%;
-    background-color: #f8f9fa;
-    border-right: 1px solid #dee2e6;
-    z-index: 1060;
-    transition: left 0.3s ease;
-    overflow-y: auto;
-}
-
-.mobile-sidebar.active {
-    left: 0;
-}
-
-.mobile-sidebar .column-content {
-    height: auto;
-    min-height: 100vh;
-}
-
-/* レスポンシブ設定 */
-/* レスポンシブ設定は廃止（常に横並び） */
-
-/* 
-========================================
-3. テキストエディターコンポーネント
+2.1. テキストエディターコンポーネント
 ========================================
 */
 
@@ -164,23 +70,6 @@ html, body {
     top: 0;
     z-index: 10;
     box-sizing: border-box;
-}
-
-/* モバイル時のエディターメニューバー調整 */
-@media (max-width: 767.98px) {
-    .editor-menu-bar {
-        padding-left: 60px; /* ハンバーガーボタン分のスペース確保 */
-        padding-top: 60px; /* ハンバーガーメニューの下に配置 */
-    }
-
-    .editor-menu-bar h5 {
-        font-size: 1rem; /* モバイルでタイトルサイズ調整 */
-    }
-
-    .editor-menu-bar .btn {
-        font-size: 0.8rem; /* ボタンサイズ調整 */
-        padding: 0.25rem 0.5rem;
-    }
 }
 
 .editor-container {
@@ -224,7 +113,7 @@ html, body {
 
 /* 
 ========================================
-4. 縦書き表示システム
+3. 縦書き表示システム
 ========================================
 */
 
@@ -290,7 +179,7 @@ html, body {
 
 /* 
 ========================================
-5. 台本専用要素
+4. 台本専用要素
 ========================================
 */
 
@@ -310,7 +199,7 @@ html, body {
 
 /* 
 ========================================
-6. 通知システム
+5. 通知システム
 ========================================
 */
 
@@ -366,7 +255,7 @@ html, body {
 
 /* 
 ========================================
-7. 印刷専用スタイル
+6. 印刷専用スタイル
 ========================================
 */
 

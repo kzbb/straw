@@ -33,8 +33,6 @@ function formatVerticalTextToPages(text) {
     // 
     const startChars = '。、？！」』）〕］｝〉》】〗〙〛ー：；'; // 行頭禁止文字
     const endChars = '「『（〔［｛〈《【〖〘〚';                // 行末禁止文字
-    const punctuation = '。、？！：；';                        // 句読点類（拡張用）
-
     /**
      * 禁則処理判定関数
      * 
@@ -693,96 +691,12 @@ function handleFileSelect(event) {
 
 /* 
 ========================================
-ハンバーガーメニュー制御
-========================================
-*/
-
-/**
- * ハンバーガーメニュー初期化
- */
-function initHamburgerMenu() {
-    const hamburgerMenu = document.getElementById('hamburgerMenu');
-    const sidebarOverlay = document.getElementById('sidebarOverlay');
-    const mobileSidebar = document.getElementById('mobileSidebar');
-
-    // ハンバーガーボタンクリック
-    hamburgerMenu.addEventListener('click', function() {
-        toggleSidebar();
-    });
-
-    // オーバーレイクリックで閉じる
-    sidebarOverlay.addEventListener('click', function() {
-        closeSidebar();
-    });
-
-    // ESCキーで閉じる
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            closeSidebar();
-        }
-    });
-}
-
-/**
- * サイドバーの開閉切り替え
- */
-function toggleSidebar() {
-    const hamburgerMenu = document.getElementById('hamburgerMenu');
-    const sidebarOverlay = document.getElementById('sidebarOverlay');
-    const mobileSidebar = document.getElementById('mobileSidebar');
-
-    const isActive = hamburgerMenu.classList.contains('active');
-
-    if (isActive) {
-        closeSidebar();
-    } else {
-        openSidebar();
-    }
-}
-
-/**
- * サイドバーを開く
- */
-function openSidebar() {
-    const hamburgerMenu = document.getElementById('hamburgerMenu');
-    const sidebarOverlay = document.getElementById('sidebarOverlay');
-    const mobileSidebar = document.getElementById('mobileSidebar');
-
-    hamburgerMenu.classList.add('active');
-    sidebarOverlay.classList.add('active');
-    mobileSidebar.classList.add('active');
-
-    // ボディのスクロールを無効化
-    document.body.style.overflow = 'hidden';
-}
-
-/**
- * サイドバーを閉じる
- */
-function closeSidebar() {
-    const hamburgerMenu = document.getElementById('hamburgerMenu');
-    const sidebarOverlay = document.getElementById('sidebarOverlay');
-    const mobileSidebar = document.getElementById('mobileSidebar');
-
-    hamburgerMenu.classList.remove('active');
-    sidebarOverlay.classList.remove('active');
-    mobileSidebar.classList.remove('active');
-
-    // ボディのスクロールを復元
-    document.body.style.overflow = '';
-}
-
-/* 
-========================================
 アプリケーション初期化
 ========================================
 */
 
 // 初期プレビュー表示実行
 updateVerticalDisplay();
-
-// ハンバーガーメニュー初期化
-initHamburgerMenu();
 
 // キーボードショートカット（Cmd+S）でファイル保存
 document.addEventListener('keydown', function(event) {
