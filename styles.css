@@ -38,6 +38,17 @@ small {
     font-size: 0.875em;
 }
 
+/* フォーム要素のフォント継承（ブラウザデフォルト上書き） */
+button,
+input,
+select,
+textarea {
+    margin: 0;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+}
+
 /* グリッドシステム */
 .row {
     display: flex;
@@ -105,6 +116,18 @@ small {
     padding: 0.25rem 0.5rem;
     font-size: 0.875rem;
     border-radius: 0.25rem;
+}
+
+.btn-primary {
+    color: #fff;
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.btn-primary:hover {
+    color: #fff;
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
 }
 
 .btn-outline-primary {
