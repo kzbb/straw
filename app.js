@@ -1,8 +1,12 @@
-/* 
+/*
 ========================================
 アプリケーションコア：テキスト処理エンジン
 ========================================
 */
+
+// 柱書検出パターン（複数箇所で共通使用）
+const MANUAL_SCENE_REGEX = /^【([^】]+)】[◯○◎◇□＊☆]/;
+const AUTO_SCENE_REGEX = /^[◯○◎◇□＊☆]/;
 
 /**
  * 縦書きB5ページ分割メイン関数
@@ -84,10 +88,11 @@ function formatVerticalTextToPages(text) {
     // 
     // ========== 各行処理メインループ ==========
     // 
-    for (let line of lines) {
+    for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+        const line = lines[lineIdx];
         // 空行処理：そのまま追加
         if (line.length === 0) {
-            allFormattedLines.push({ text: '', isScene: false });
+            allFormattedLines.push({ text: '', isScene: false, originalLineIndex: lineIdx });
             continue;
         }
 
@@ -99,7 +104,7 @@ function formatVerticalTextToPages(text) {
         // 
 
         // 手動指定パターンの検出（【文字列】 + 記号）
-        const manualSceneMatch = line.trim().match(/^【([^】]+)】[◯○◎◇□＊☆]/);
+        const manualSceneMatch = line.trim().match(MANUAL_SCENE_REGEX);
 
         if (manualSceneMatch) {
             // 手動指定の柱書処理
@@ -123,12 +128,12 @@ function formatVerticalTextToPages(text) {
 
             if (sceneText.length <= maxCharsPerLine) {
                 // 1行以内：そのまま追加
-                allFormattedLines.push({ text: sceneText, isScene: true });
+                allFormattedLines.push({ text: sceneText, isScene: true, originalLineIndex: lineIdx });
             } else {
                 // 折り返し必要：分割処理
                 const firstLineBreak = findBreakPoint(sceneText, maxCharsPerLine);
                 const firstLine = sceneText.substring(0, firstLineBreak);
-                allFormattedLines.push({ text: firstLine, isScene: true });
+                allFormattedLines.push({ text: firstLine, isScene: true, originalLineIndex: lineIdx });
 
                 // 残りテキスト処理
                 let remainingText = sceneText.substring(firstLineBreak);
@@ -157,7 +162,7 @@ function formatVerticalTextToPages(text) {
         }
 
         // 自動連番パターンの検出（記号のみ）
-        if (line.trim().match(/^[◯○◎◇□＊☆]/)) {
+        if (line.trim().match(AUTO_SCENE_REGEX)) {
             // 番号変換：記号 → "   1 "形式（4桁+空白）
             const sceneNumber4Digits = String(sceneNumber).padStart(4, ' ') + ' ';
             const sceneText = line.replace(/^\s*[◯○◎◇□＊☆]/, sceneNumber4Digits);
@@ -169,12 +174,12 @@ function formatVerticalTextToPages(text) {
 
             if (sceneText.length <= maxCharsPerLine) {
                 // 1行以内：そのまま追加
-                allFormattedLines.push({ text: sceneText, isScene: true });
+                allFormattedLines.push({ text: sceneText, isScene: true, originalLineIndex: lineIdx });
             } else {
                 // 折り返し必要：分割処理
                 const firstLineBreak = findBreakPoint(sceneText, maxCharsPerLine);
                 const firstLine = sceneText.substring(0, firstLineBreak);
-                allFormattedLines.push({ text: firstLine, isScene: true });
+                allFormattedLines.push({ text: firstLine, isScene: true, originalLineIndex: lineIdx });
 
                 // 残りテキスト処理
                 let remainingText = sceneText.substring(firstLineBreak);
@@ -212,7 +217,7 @@ function formatVerticalTextToPages(text) {
 
         if (line.length <= maxCharsPerLine) {
             // 1行以内：そのまま追加
-            allFormattedLines.push({ text: line, isScene: false });
+            allFormattedLines.push({ text: line, isScene: false, originalLineIndex: lineIdx });
         } else {
             // 
             // ========== 29文字超過：自動折り返し処理 ==========
@@ -221,7 +226,7 @@ function formatVerticalTextToPages(text) {
             // 第1行の改行位置決定
             const firstLineBreak = findBreakPoint(line, maxCharsPerLine);
             const firstLine = line.substring(0, firstLineBreak);
-            allFormattedLines.push({ text: firstLine, isScene: false });
+            allFormattedLines.push({ text: firstLine, isScene: false, originalLineIndex: lineIdx });
 
             // セリフ行判定：元行全体でカギカッコ終了チェック
             const originalLineEndsWithQuote = line.trim().endsWith('」') || line.trim().endsWith('』');
@@ -248,16 +253,16 @@ function formatVerticalTextToPages(text) {
                 if (availableSpace <= 0) {
                     // インデント過大：強制切断
                     const breakPoint = findBreakPoint(remainingText, maxCharsPerLine);
-                    allFormattedLines.push({ text: remainingText.substring(0, breakPoint), isScene: false });
+                    allFormattedLines.push({ text: remainingText.substring(0, breakPoint), isScene: false, originalLineIndex: lineIdx });
                     remainingText = remainingText.substring(breakPoint);
                 } else if (remainingText.length <= availableSpace) {
                     // 残り全部収まる：完了
-                    allFormattedLines.push({ text: currentIndent + remainingText, isScene: false });
+                    allFormattedLines.push({ text: currentIndent + remainingText, isScene: false, originalLineIndex: lineIdx });
                     break;
                 } else {
                     // 分割継続
                     const breakPoint = findBreakPoint(remainingText, availableSpace);
-                    allFormattedLines.push({ text: currentIndent + remainingText.substring(0, breakPoint), isScene: false });
+                    allFormattedLines.push({ text: currentIndent + remainingText.substring(0, breakPoint), isScene: false, originalLineIndex: lineIdx });
                     remainingText = remainingText.substring(breakPoint);
                 }
             }
@@ -396,11 +401,17 @@ function updateVerticalDisplay() {
                 const lineDiv = document.createElement('div');
                 lineDiv.textContent = lineObj.text;
                 lineDiv.classList.add('scene-line');
+                if (lineObj.originalLineIndex !== undefined) {
+                    lineDiv.dataset.lineIndex = lineObj.originalLineIndex;
+                }
                 textDiv.appendChild(lineDiv);
             } else {
                 // 通常行：span要素使用
                 const lineSpan = document.createElement('span');
                 lineSpan.textContent = lineObj.text;
+                if (lineObj.originalLineIndex !== undefined) {
+                    lineSpan.dataset.lineIndex = lineObj.originalLineIndex;
+                }
 
                 // 最終行以外は改行追加
                 if (lineIndex < pageLines.length - 1) {
@@ -426,6 +437,12 @@ function updateVerticalDisplay() {
         pageDiv.appendChild(paperDiv);
         pagesContainer.appendChild(pageDiv);
     });
+
+    // アウトラインタブが開いている場合は柱書リストを更新
+    if (activeTab === 'outline') buildSceneList();
+
+    // ミラーを更新（jumpEditor のスクロール位置計算に使用）
+    updateMirror();
 }
 
 /* 
@@ -445,6 +462,7 @@ function updateVerticalDisplay() {
  */
 let currentFileHandle = null;
 let currentFileName = null;
+let activeTab = 'usage'; // 'usage' | 'outline'
 
 async function saveText(forceNewFile = false) {
     const editor = document.getElementById('editor');
@@ -697,6 +715,225 @@ function handleFileSelect(event) {
 
 // 初期プレビュー表示実行
 updateVerticalDisplay();
+
+// 柱書リストのクリックを委譲（リスト再構築ごとにリスナーを作り直さない）
+document.getElementById('scene-list').addEventListener('click', (e) => {
+    const item = e.target.closest('.scene-list-item');
+    if (item) jumpToScene(parseInt(item.dataset.lineIndex, 10));
+});
+
+// プレビュークリックでエディタの対応行にジャンプ
+document.getElementById('pages-container').addEventListener('click', (e) => {
+    const el = e.target.closest('[data-line-index]');
+    if (el) jumpEditor(parseInt(el.dataset.lineIndex, 10));
+});
+
+/*
+========================================
+アウトライン（柱書リスト）システム
+========================================
+*/
+
+// タブ切り替え
+function switchLeftTab(tabName) {
+    activeTab = tabName;
+    document.getElementById('panel-usage').hidden = tabName !== 'usage';
+    document.getElementById('panel-outline').hidden = tabName !== 'outline';
+    document.getElementById('tab-btn-usage').classList.toggle('active', tabName === 'usage');
+    document.getElementById('tab-btn-outline').classList.toggle('active', tabName === 'outline');
+    if (tabName === 'outline') buildSceneList();
+}
+
+// 柱書リスト構築
+function buildSceneList() {
+    const editor = document.getElementById('editor');
+    const lines = editor.value.split('\n');
+    const container = document.getElementById('scene-list');
+    container.innerHTML = '';
+    let sceneCounter = 1;
+    let found = false;
+
+    lines.forEach((line, lineIndex) => {
+        const manualMatch = line.trim().match(MANUAL_SCENE_REGEX);
+        const autoMatch = !manualMatch && line.trim().match(AUTO_SCENE_REGEX);
+        if (!manualMatch && !autoMatch) return;
+        found = true;
+
+        let label, rest;
+        if (manualMatch) {
+            label = manualMatch[1];
+            rest = line.replace(/^\s*【[^】]+】[◯○◎◇□＊☆]\s*/, '').trim();
+        } else {
+            label = String(sceneCounter++);
+            rest = line.replace(/^\s*[◯○◎◇□＊☆]\s*/, '').trim();
+        }
+
+        const item = document.createElement('div');
+        item.className = 'scene-list-item';
+
+        const numSpan = document.createElement('span');
+        numSpan.className = 'scene-number';
+        numSpan.textContent = label;
+
+        const textSpan = document.createElement('span');
+        textSpan.className = 'scene-text';
+        textSpan.textContent = rest || '（無題）';
+
+        item.dataset.lineIndex = lineIndex;
+        item.appendChild(numSpan);
+        item.appendChild(textSpan);
+        container.appendChild(item);
+    });
+
+    if (!found) {
+        const empty = document.createElement('p');
+        empty.className = 'scene-list-empty';
+        empty.textContent = '柱書がありません';
+        container.appendChild(empty);
+    }
+}
+
+// エディターとプレビューの両方にジャンプ
+function jumpToScene(lineIndex) {
+    jumpEditor(lineIndex);
+    jumpPreview(lineIndex);
+}
+
+/*
+========================================
+エディターミラーシステム
+テキストエリアの後ろに不可視のミラーdivを配置し、
+各行の実際のDOM位置（折り返し込み）を取得してジャンプに使用する。
+========================================
+*/
+
+/**
+ * ミラーdiv更新：入力テキストの各行をspanで分割して格納
+ * テキストエリアと同じフォント・幅なので、offsetTop が実際の行位置と一致する
+ */
+function updateMirror() {
+    const editor = document.getElementById('editor');
+    const mirror = document.getElementById('editor-mirror');
+    if (!mirror) return;
+    const lines = editor.value.split('\n');
+    mirror.innerHTML = '';
+    lines.forEach((line, index) => {
+        const span = document.createElement('span');
+        span.dataset.lineIndex = index;
+        // 改行文字をテキストとして含めることで、テキストエリアと同じ折り返しを再現
+        span.textContent = line + (index < lines.length - 1 ? '\n' : '');
+        mirror.appendChild(span);
+    });
+}
+
+// エディターの指定行にジャンプ・選択
+function jumpEditor(lineIndex) {
+    const editor = document.getElementById('editor');
+    const mirror = document.getElementById('editor-mirror');
+    const lines = editor.value.split('\n');
+    let charPos = 0;
+    for (let i = 0; i < lineIndex; i++) charPos += lines[i].length + 1;
+    const lineLen = (lines[lineIndex] || '').length;
+
+    // ミラーのspanのoffsetTopから正確なスクロール位置を取得
+    // lineIndex * lineH の推計より正確（長い行の折り返しを考慮済み）
+    const span = mirror && mirror.querySelector(`[data-line-index="${lineIndex}"]`);
+    let targetScrollTop;
+    if (span) {
+        targetScrollTop = Math.max(0, span.offsetTop - editor.clientHeight / 2);
+    } else {
+        // フォールバック（ミラーが使えない場合）
+        const style = window.getComputedStyle(editor);
+        const lineH = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.5;
+        const padT = parseFloat(style.paddingTop);
+        targetScrollTop = Math.max(0, lineIndex * lineH + padT - editor.clientHeight / 2);
+    }
+
+    editor.focus({ preventScroll: true });
+    // 先にスクロールすることで選択範囲が可視域内に入り、
+    // setSelectionRange がスクロールを起こさない状態を作る
+    editor.scrollTop = targetScrollTop;
+    editor.setSelectionRange(charPos, charPos + lineLen);
+    editor.scrollTop = targetScrollTop;
+}
+
+// プレビューの該当柱書ページにジャンプ
+function jumpPreview(lineIndex) {
+    const sceneEl = document.querySelector(`.scene-line[data-line-index="${lineIndex}"]`);
+    if (!sceneEl) return;
+    const pageDiv = sceneEl.closest('.mb-4');
+    if (pageDiv) pageDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/*
+========================================
+カラムリサイズシステム
+========================================
+*/
+
+function initResizers() {
+    const row = document.querySelector('.row');
+    const leftCol = document.querySelector('.left-column');
+    const centerCol = document.querySelector('.center-column');
+    const rightCol = document.querySelector('.right-column');
+    const dividerLeft = document.getElementById('divider-left');
+    const dividerRight = document.getElementById('divider-right');
+
+    const DIVIDER_WIDTH = 5;
+    const MIN_LEFT = 100;
+    const MIN_CENTER = 200;
+    const MIN_RIGHT = 200;
+
+    function initWidths() {
+        const totalWidth = row.getBoundingClientRect().width;
+        const available = totalWidth - DIVIDER_WIDTH * 2;
+        const leftWidth = Math.floor(available * 0.1667);
+        const centerWidth = Math.floor(available * 0.4167);
+        const rightWidth = available - leftWidth - centerWidth;
+        leftCol.style.width = leftWidth + 'px';
+        centerCol.style.width = centerWidth + 'px';
+        rightCol.style.width = rightWidth + 'px';
+    }
+
+    function setupDivider(divider, colA, colB, minA, minB) {
+        divider.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            const startX = e.clientX;
+            const startA = colA.getBoundingClientRect().width;
+            const startB = colB.getBoundingClientRect().width;
+
+            function onMove(e) {
+                const dx = e.clientX - startX;
+                const newA = startA + dx;
+                const newB = startB - dx;
+                if (newA >= minA && newB >= minB) {
+                    colA.style.width = newA + 'px';
+                    colB.style.width = newB + 'px';
+                }
+            }
+
+            function onUp() {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                divider.classList.remove('dragging');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+            divider.classList.add('dragging');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        });
+    }
+
+    initWidths();
+    setupDivider(dividerLeft, leftCol, centerCol, MIN_LEFT, MIN_CENTER);
+    setupDivider(dividerRight, centerCol, rightCol, MIN_CENTER, MIN_RIGHT);
+}
+
+initResizers();
 
 // キーボードショートカット（Cmd+S）でファイル保存
 document.addEventListener('keydown', function(event) {

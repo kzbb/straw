@@ -52,7 +52,7 @@ textarea {
 /* グリッドシステム */
 .row {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
 .col-2 {
@@ -202,23 +202,131 @@ html, body {
 }
 
 .left-column {
-    border-right: 1px solid #dee2e6;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* 左カラム タブバー */
+.left-tab-bar {
+    display: flex;
+    flex-shrink: 0;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.left-tab-btn {
+    flex: 1;
+    padding: 8px 4px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.left-tab-btn:hover {
+    color: #212529;
+    background-color: #e9ecef;
+}
+
+.left-tab-btn.active {
+    color: #0d6efd;
+    border-bottom-color: #0d6efd;
+}
+
+/* 左カラム内の column-content はタブバーの残り高さを占有 */
+.left-column .column-content {
+    flex: 1;
+    height: 0;
+    min-height: 0;
+}
+
+/* 柱書リスト */
+.scene-list-item {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: #333;
+    overflow: hidden;
+}
+
+.scene-list-item:hover {
+    background-color: #e8f0fe;
+    color: #0d6efd;
+}
+
+.scene-number {
+    flex-shrink: 0;
+    color: #6c757d;
+    font-size: 0.75rem;
+    min-width: 2.5em;
+    text-align: right;
+}
+
+.scene-list-item:hover .scene-number {
+    color: #0d6efd;
+}
+
+.scene-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.scene-list-empty {
+    color: #6c757d;
+    font-size: 0.85rem;
+    padding: 16px 8px;
+    text-align: center;
 }
 
 .center-column {
     background-color: #fff;
     padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .right-column {
-    border-left: 1px solid #dee2e6;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* カラム仕切り（ドラッグリサイズ） */
+.col-divider {
+    flex: 0 0 5px;
+    width: 5px;
+    background-color: #dee2e6;
+    cursor: col-resize;
+    flex-shrink: 0;
+    transition: background-color 0.15s ease;
+    z-index: 10;
+}
+
+.col-divider:hover,
+.col-divider.dragging {
+    background-color: #adb5bd;
 }
 
 /* カラム内コンテンツ共通 */
 .column-content {
     padding: 20px;
-    height: 100vh;
     overflow-y: auto;
+}
+
+.right-column .column-content {
+    flex: 1;
+    min-height: 0;
 }
 
 /*
@@ -232,14 +340,37 @@ html, body {
     background-color: #f8f9fa;
     border-bottom: 1px solid #dee2e6;
     padding: 15px 20px;
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    flex-shrink: 0;
 }
 
 .editor-container {
-    height: calc(100% - 60px);
+    flex: 1;
+    min-height: 0;
     position: relative;
+}
+
+/* エディターミラー（行オフセット計算用・不可視） */
+.code-editor-mirror {
+    /* テキストエリアと同じ位置・サイズ */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 20px;
+    margin: 0;
+    box-sizing: border-box;
+
+    /* テキストエリアと同じフォント・レイアウト設定 */
+    font-family: 'Courier New', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+
+    /* 不可視・操作無効 */
+    visibility: hidden;
+    pointer-events: none;
+    overflow: hidden;
 }
 
 /* エディター入力エリア */
@@ -329,6 +460,16 @@ html, body {
     font-size: 12px;
     line-height: 1.8;
     color: #333;
+}
+
+/* プレビュークリック：対応行へジャンプ可能なことを示すカーソル */
+.vertical-text [data-line-index] {
+    cursor: pointer;
+}
+
+/* プレビューホバー：柱書リストと同じ色でハイライト */
+.vertical-text [data-line-index]:hover {
+    background-color: #e8f0fe;
 }
 
 /* ページ番号 */

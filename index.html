@@ -17,11 +17,16 @@
         -->
         <div class="container-fluid full-height">
             <div class="row h-100">
-                <!-- 左カラム：使い方・ナビゲーション -->
+                <!-- 左カラム：使い方 / 柱書アウトライン -->
                 <div class="col-2 left-column">
+                    <div class="left-tab-bar">
+                        <button class="left-tab-btn active" id="tab-btn-usage" onclick="switchLeftTab('usage')">使い方</button>
+                        <button class="left-tab-btn" id="tab-btn-outline" onclick="switchLeftTab('outline')">柱書</button>
+                    </div>
                     <div class="column-content">
+                        <div id="panel-usage" class="left-panel">
                         <h5>使い方</h5>
-                        
+
                         <!-- 推奨環境 -->
                         <div class="mb-4">
                             <h6 class="text-primary">推奨環境</h6>
@@ -127,10 +132,17 @@
                             </small>
                         </div>
 
+                        </div><!-- /panel-usage -->
+
+                        <div id="panel-outline" class="left-panel" hidden>
+                            <div id="scene-list"></div>
+                        </div><!-- /panel-outline -->
+
                     </div>
                 </div>
-                
-                <!-- 
+                <div class="col-divider" id="divider-left"></div>
+
+                <!--
                 ========================================
                 中央カラム：テキストエディター
                 ========================================
@@ -160,14 +172,17 @@
                     
                     <!-- エディター本体 -->
                     <div class="editor-container">
-                        <textarea 
-                            class="code-editor" 
-                            id="editor" 
+                        <!-- ジャンプ位置計算用ミラー（不可視・テキスト構造を保持） -->
+                        <div id="editor-mirror" class="code-editor-mirror" aria-hidden="true"></div>
+                        <textarea
+                            class="code-editor"
+                            id="editor"
                             placeholder="// ここにテキストを入力してください..."></textarea>
                     </div>
                 </div>
-                
-                <!-- 
+                <div class="col-divider" id="divider-right"></div>
+
+                <!--
                 ========================================
                 右カラム：縦書きプレビュー
                 ========================================
