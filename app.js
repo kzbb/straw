@@ -884,16 +884,42 @@ function initResizers() {
     const MIN_CENTER = 200;
     const MIN_RIGHT = 200;
 
+    // 右カラムは flex:1 で残り幅を自動的に埋める
+    rightCol.style.flex = '1';
+    rightCol.style.minWidth = MIN_RIGHT + 'px';
+
     function initWidths() {
         const totalWidth = row.getBoundingClientRect().width;
         const available = totalWidth - DIVIDER_WIDTH * 2;
         const leftWidth = Math.floor(available * 0.1667);
         const centerWidth = Math.floor(available * 0.4167);
-        const rightWidth = available - leftWidth - centerWidth;
         leftCol.style.width = leftWidth + 'px';
         centerCol.style.width = centerWidth + 'px';
-        rightCol.style.width = rightWidth + 'px';
     }
+
+    function handleResize() {
+        const totalWidth = row.getBoundingClientRect().width;
+        // 右カラムが MIN_RIGHT を確保できる上限
+        const maxLeftCenter = totalWidth - DIVIDER_WIDTH * 2 - MIN_RIGHT;
+        const currentLeft = leftCol.getBoundingClientRect().width;
+        const currentCenter = centerCol.getBoundingClientRect().width;
+        const currentSum = currentLeft + currentCenter;
+
+        // 右カラムに十分なスペースがある場合は何もしない（右が自動で広がる）
+        if (currentSum <= maxLeftCenter) return;
+
+        // ウィンドウが縮んで右カラムが圧迫される場合、左・中を比率を保ちながら縮める
+        const ratio = maxLeftCenter / currentSum;
+        let newLeft = Math.round(currentLeft * ratio);
+        let newCenter = maxLeftCenter - newLeft;
+        if (newLeft < MIN_LEFT) { newLeft = MIN_LEFT; newCenter = maxLeftCenter - newLeft; }
+        if (newCenter < MIN_CENTER) { newCenter = MIN_CENTER; newLeft = maxLeftCenter - newCenter; }
+
+        leftCol.style.width = newLeft + 'px';
+        centerCol.style.width = newCenter + 'px';
+    }
+
+    window.addEventListener('resize', handleResize);
 
     function setupDivider(divider, colA, colB, minA, minB) {
         divider.addEventListener('mousedown', (e) => {
@@ -906,9 +932,20 @@ function initResizers() {
                 const dx = e.clientX - startX;
                 const newA = startA + dx;
                 const newB = startB - dx;
-                if (newA >= minA && newB >= minB) {
-                    colA.style.width = newA + 'px';
-                    colB.style.width = newB + 'px';
+                if (colB === rightCol) {
+                    // 右カラムは flex:1 なので実際の残り幅で最小幅チェック
+                    const rightWidth = row.getBoundingClientRect().width
+                        - DIVIDER_WIDTH * 2
+                        - leftCol.getBoundingClientRect().width
+                        - newA;
+                    if (newA >= minA && rightWidth >= minB) {
+                        colA.style.width = newA + 'px';
+                    }
+                } else {
+                    if (newA >= minA && newB >= minB) {
+                        colA.style.width = newA + 'px';
+                        colB.style.width = newB + 'px';
+                    }
                 }
             }
 
@@ -928,7 +965,7 @@ function initResizers() {
         });
     }
 
-    initWidths();
+    requestAnimationFrame(initWidths);
     setupDivider(dividerLeft, leftCol, centerCol, MIN_LEFT, MIN_CENTER);
     setupDivider(dividerRight, centerCol, rightCol, MIN_CENTER, MIN_RIGHT);
 }
