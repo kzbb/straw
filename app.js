@@ -1,3 +1,5 @@
+// @ts-check
+
 /*
 ========================================
 アプリケーションコア：テキスト処理エンジン
@@ -98,9 +100,46 @@ function formatVerticalTextToPages(text) {
         return maxLength; // 強制切断
     }
 
-    // 
+    //
+    // ========== 柱書折り返しヘルパー ==========
+    // 手動・自動柱書の共通折り返し処理
+    //
+    /**
+     * @param {string} sceneText
+     * @param {number} lineIdx
+     */
+    function pushSceneLines(sceneText, lineIdx) {
+        const indentMatch = sceneText.match(/^(\s*)/);
+        const baseIndent = indentMatch ? indentMatch[1] : '';
+
+        if (sceneText.length <= maxCharsPerLine) {
+            allFormattedLines.push({ text: sceneText, isScene: true, originalLineIndex: lineIdx });
+        } else {
+            const firstLineBreak = findBreakPoint(sceneText, maxCharsPerLine);
+            allFormattedLines.push({ text: sceneText.substring(0, firstLineBreak), isScene: true, originalLineIndex: lineIdx });
+
+            let remainingText = sceneText.substring(firstLineBreak);
+            while (remainingText.length > 0) {
+                const availableSpace = maxCharsPerLine - baseIndent.length;
+                if (availableSpace <= 0) {
+                    const breakPoint = findBreakPoint(remainingText, maxCharsPerLine);
+                    allFormattedLines.push({ text: remainingText.substring(0, breakPoint), isScene: true });
+                    remainingText = remainingText.substring(breakPoint);
+                } else if (remainingText.length <= availableSpace) {
+                    allFormattedLines.push({ text: baseIndent + remainingText, isScene: true });
+                    break;
+                } else {
+                    const breakPoint = findBreakPoint(remainingText, availableSpace);
+                    allFormattedLines.push({ text: baseIndent + remainingText.substring(0, breakPoint), isScene: true });
+                    remainingText = remainingText.substring(breakPoint);
+                }
+            }
+        }
+    }
+
+    //
     // ========== 各行処理メインループ ==========
-    // 
+    //
     for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
         const line = lines[lineIdx];
         // 空行処理：そのまま追加
@@ -134,43 +173,7 @@ function formatVerticalTextToPages(text) {
             }
 
             const sceneText = line.replace(/^(\s*)【[^】]+】[◯○◎◇□＊☆]/, `$1${formattedSceneText}`);
-
-            // 柱書の折り返し処理
-            const indentMatch = sceneText.match(/^(\s*)/);
-            const baseIndent = indentMatch ? indentMatch[1] : '';
-
-            if (sceneText.length <= maxCharsPerLine) {
-                // 1行以内：そのまま追加
-                allFormattedLines.push({ text: sceneText, isScene: true, originalLineIndex: lineIdx });
-            } else {
-                // 折り返し必要：分割処理
-                const firstLineBreak = findBreakPoint(sceneText, maxCharsPerLine);
-                const firstLine = sceneText.substring(0, firstLineBreak);
-                allFormattedLines.push({ text: firstLine, isScene: true, originalLineIndex: lineIdx });
-
-                // 残りテキスト処理
-                let remainingText = sceneText.substring(firstLineBreak);
-
-                while (remainingText.length > 0) {
-                    const availableSpace = maxCharsPerLine - baseIndent.length;
-
-                    if (availableSpace <= 0) {
-                        // インデント過大：強制切断
-                        const breakPoint = findBreakPoint(remainingText, maxCharsPerLine);
-                        allFormattedLines.push({ text: remainingText.substring(0, breakPoint), isScene: true });
-                        remainingText = remainingText.substring(breakPoint);
-                    } else if (remainingText.length <= availableSpace) {
-                        // 残り全部収まる：完了
-                        allFormattedLines.push({ text: baseIndent + remainingText, isScene: true });
-                        break;
-                    } else {
-                        // 分割継続
-                        const breakPoint = findBreakPoint(remainingText, availableSpace);
-                        allFormattedLines.push({ text: baseIndent + remainingText.substring(0, breakPoint), isScene: true });
-                        remainingText = remainingText.substring(breakPoint);
-                    }
-                }
-            }
+            pushSceneLines(sceneText, lineIdx);
             continue;
         }
 
@@ -180,43 +183,7 @@ function formatVerticalTextToPages(text) {
             const sceneNumber4Digits = String(sceneNumber).padStart(4, ' ') + ' ';
             const sceneText = line.replace(/^\s*[◯○◎◇□＊☆]/, sceneNumber4Digits);
             sceneNumber++; // 連番インクリメント
-
-            // 柱書の折り返し処理
-            const indentMatch = sceneText.match(/^(\s*)/);
-            const baseIndent = indentMatch ? indentMatch[1] : '';
-
-            if (sceneText.length <= maxCharsPerLine) {
-                // 1行以内：そのまま追加
-                allFormattedLines.push({ text: sceneText, isScene: true, originalLineIndex: lineIdx });
-            } else {
-                // 折り返し必要：分割処理
-                const firstLineBreak = findBreakPoint(sceneText, maxCharsPerLine);
-                const firstLine = sceneText.substring(0, firstLineBreak);
-                allFormattedLines.push({ text: firstLine, isScene: true, originalLineIndex: lineIdx });
-
-                // 残りテキスト処理
-                let remainingText = sceneText.substring(firstLineBreak);
-
-                while (remainingText.length > 0) {
-                    const availableSpace = maxCharsPerLine - baseIndent.length;
-
-                    if (availableSpace <= 0) {
-                        // インデント過大：強制切断
-                        const breakPoint = findBreakPoint(remainingText, maxCharsPerLine);
-                        allFormattedLines.push({ text: remainingText.substring(0, breakPoint), isScene: true });
-                        remainingText = remainingText.substring(breakPoint);
-                    } else if (remainingText.length <= availableSpace) {
-                        // 残り全部収まる：完了
-                        allFormattedLines.push({ text: baseIndent + remainingText, isScene: true });
-                        break;
-                    } else {
-                        // 分割継続
-                        const breakPoint = findBreakPoint(remainingText, availableSpace);
-                        allFormattedLines.push({ text: baseIndent + remainingText.substring(0, breakPoint), isScene: true });
-                        remainingText = remainingText.substring(breakPoint);
-                    }
-                }
-            }
+            pushSceneLines(sceneText, lineIdx);
             continue;
         }
 
