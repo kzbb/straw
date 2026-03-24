@@ -8,6 +8,19 @@
 const MANUAL_SCENE_REGEX = /^【([^】]+)】[◯○◎◇□＊☆]/;
 const AUTO_SCENE_REGEX = /^[◯○◎◇□＊☆]/;
 
+// 連続呼び出しを間引くユーティリティ
+function debounce(fn, delay) {
+    let timer;
+    return function(...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), delay);
+    };
+}
+
+const PREVIEW_UPDATE_DEBOUNCE_MS = 150;
+const PREVIEW_UPDATE_SYNC_THRESHOLD_MS = 16;
+let lastPreviewUpdateDuration = 0;
+
 /**
  * 縦書きB5ページ分割メイン関数
  * 
@@ -339,6 +352,7 @@ UI更新システム：プレビュー表示
  * リアルタイム更新：inputイベントで自動実行
  */
 function updateVerticalDisplay() {
+    const startTime = performance.now();
     // DOM要素取得
     const editor = document.getElementById('editor');
     const pagesContainer = document.getElementById('pages-container');
@@ -443,6 +457,7 @@ function updateVerticalDisplay() {
 
     // ミラーを更新（jumpEditor のスクロール位置計算に使用）
     updateMirror();
+    lastPreviewUpdateDuration = performance.now() - startTime;
 }
 
 /* 
@@ -509,6 +524,7 @@ async function saveText(forceNewFile = false) {
         } catch (error) {
             if (error.name === 'AbortError') return;
             console.error('保存エラー:', error);
+            showNotification('保存に失敗しました。別名で保存を試みます。', 'error');
         }
     }
 
@@ -594,7 +610,18 @@ function showNotification(message, type = 'success') {
 */
 
 // リアルタイムプレビュー更新：入力時イベント
-document.getElementById('editor').addEventListener('input', updateVerticalDisplay);
+const debouncedUpdateVerticalDisplay = debounce(updateVerticalDisplay, PREVIEW_UPDATE_DEBOUNCE_MS);
+
+function handleEditorInput() {
+    if (lastPreviewUpdateDuration >= PREVIEW_UPDATE_SYNC_THRESHOLD_MS) {
+        debouncedUpdateVerticalDisplay();
+        return;
+    }
+
+    updateVerticalDisplay();
+}
+
+document.getElementById('editor').addEventListener('input', handleEditorInput);
 
 /**
  * 印刷実行関数

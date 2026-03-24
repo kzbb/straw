@@ -587,6 +587,10 @@ html, body {
         left: 0;
         top: 0;
         width: 100%;
+        /* B5 印刷スケール算出根拠：
+           プレビュー紙 400×560px をブラウザの印刷エンジンで B5 (182×257mm) に
+           合わせるための実測値。ブラウザ／OS のデフォルト DPI 設定によっては
+           ズレが生じる場合があり、その際はこの値を調整する。 */
         transform: scale(2.28);
         transform-origin: top left;
     }
