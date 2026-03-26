@@ -6,6 +6,9 @@
         <title>縦書き台本整形ツール</title>
         
         <link rel="stylesheet" href="styles.css">
+        <link rel="manifest" href="manifest.json">
+        <meta name="theme-color" content="#2c3e50">
+        <link rel="apple-touch-icon" href="icon.svg">
     </head>
     
     <body>
@@ -235,5 +238,10 @@
         </div>
 
         <script src="app.js"></script>
+        <script>
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js');
+            }
+        </script>
     </body>
 </html>
