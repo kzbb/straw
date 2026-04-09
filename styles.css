@@ -472,6 +472,15 @@ html, body {
     background-color: #e8f0fe;
 }
 
+/* セリフ行の発言者プレフィックス用：空白だけ固定幅にする */
+.fixed-space {
+    display: inline-block;
+    inline-size: 1em;
+    block-size: 1em;
+    line-height: 1;
+    white-space: pre;
+}
+
 /* ページ番号 */
 .page-number {
     position: absolute;

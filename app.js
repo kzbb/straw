@@ -308,6 +308,27 @@ UI更新システム：プレビュー表示
 */
 
 /**
+ * セリフ行プレフィックスを描画し、スペース文字だけを固定幅化する。
+ * Chrome の縦書き行頭空白の差異を吸収するため、空白は要素化して 1em を保証する。
+ *
+ * @param {HTMLElement} target
+ * @param {string} prefixText
+ */
+function appendDialoguePrefixWithFixedSpaces(target, prefixText) {
+    for (const ch of prefixText) {
+        if (ch === ' ' || ch === '　') {
+            const spaceSpan = document.createElement('span');
+            spaceSpan.className = 'fixed-space';
+            spaceSpan.textContent = ch;
+            target.appendChild(spaceSpan);
+            continue;
+        }
+
+        target.appendChild(document.createTextNode(ch));
+    }
+}
+
+/**
  * 縦書きプレビュー更新関数
  * 
  * 【処理フロー】
@@ -389,7 +410,20 @@ function updateVerticalDisplay() {
             } else {
                 // 通常行：span要素使用
                 const lineSpan = document.createElement('span');
-                lineSpan.textContent = lineObj.text;
+                const lineText = lineObj.text;
+                const trimmedLineText = lineText.trimEnd();
+                const isDialogueLine = trimmedLineText.endsWith('」') || trimmedLineText.endsWith('』');
+                const quoteStartIndex = lineText.search(/[「『]/);
+
+                if (isDialogueLine && quoteStartIndex > 0) {
+                    const prefixText = lineText.slice(0, quoteStartIndex);
+                    const quoteAndAfter = lineText.slice(quoteStartIndex);
+                    appendDialoguePrefixWithFixedSpaces(lineSpan, prefixText);
+                    lineSpan.appendChild(document.createTextNode(quoteAndAfter));
+                } else {
+                    lineSpan.textContent = lineText;
+                }
+
                 if (lineObj.originalLineIndex !== undefined) {
                     lineSpan.dataset.lineIndex = lineObj.originalLineIndex;
                 }
