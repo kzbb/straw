@@ -329,6 +329,33 @@ function appendDialoguePrefixWithFixedSpaces(target, prefixText) {
 }
 
 /**
+ * セリフ行の「前」部分を、プレビュー上で最小3文字幅に整える。
+ * 元テキストは変更せず、表示時にのみ不足分の全角スペースを補う。
+ *
+ * 例:
+ * - "あいう" -> "あいう"（そのまま）
+ * - "かき"   -> "か　き"
+ * - "さ"     -> "　さ　"
+ *
+ * @param {string} prefixText
+ * @returns {string}
+ */
+function normalizeDialoguePrefixForPreview(prefixText) {
+    const chars = Array.from(prefixText);
+    if (chars.length >= 3) return prefixText;
+
+    if (chars.length === 2) {
+        return `${chars[0]}　${chars[1]}`;
+    }
+
+    if (chars.length === 1) {
+        return `　${chars[0]}　`;
+    }
+
+    return '　　　';
+}
+
+/**
  * 縦書きプレビュー更新関数
  * 
  * 【処理フロー】
@@ -417,8 +444,9 @@ function updateVerticalDisplay() {
 
                 if (isDialogueLine && quoteStartIndex > 0) {
                     const prefixText = lineText.slice(0, quoteStartIndex);
+                    const alignedPrefixText = normalizeDialoguePrefixForPreview(prefixText);
                     const quoteAndAfter = lineText.slice(quoteStartIndex);
-                    appendDialoguePrefixWithFixedSpaces(lineSpan, prefixText);
+                    appendDialoguePrefixWithFixedSpaces(lineSpan, alignedPrefixText);
                     lineSpan.appendChild(document.createTextNode(quoteAndAfter));
                 } else {
                     lineSpan.textContent = lineText;
