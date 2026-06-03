@@ -9,6 +9,8 @@
 // 柱書検出パターン（複数箇所で共通使用）
 const MANUAL_SCENE_REGEX = /^【([^】]+)】[◯○◎◇□＊☆]/;
 const AUTO_SCENE_REGEX = /^[◯○◎◇□＊☆]/;
+const MANUAL_SCENE_REPLACE_REGEX = /^\s*【[^】]+】[◯○◎◇□＊☆]\s*/;
+const AUTO_SCENE_REPLACE_REGEX = /^\s*[◯○◎◇□＊☆]\s*/;
 
 // 連続呼び出しを間引くユーティリティ
 function debounce(fn, delay) {
@@ -363,122 +365,108 @@ function normalizeDialoguePrefixForPreview(prefixText) {
  * 2. ページ形式変換
  * 3. 既存プレビュークリア
  * 4. 新プレビュー生成・表示
- * 
+ *
  * リアルタイム更新：inputイベントで自動実行
  */
+
+/**
+ * @param {Array<Object>} pageLines
+ * @param {number} index
+ * @returns {HTMLElement}
+ */
+function createPageElement(pageLines, index) {
+    const pageDiv = document.createElement('div');
+    pageDiv.className = 'mb-4';
+
+    const paperDiv = document.createElement('div');
+    paperDiv.className = 'b5-paper';
+
+    const svgOverlay = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svgOverlay.style.position = 'absolute';
+    svgOverlay.style.top = '0';
+    svgOverlay.style.left = '0';
+    svgOverlay.style.width = '100%';
+    svgOverlay.style.height = '100%';
+    svgOverlay.style.pointerEvents = 'none';
+    svgOverlay.style.zIndex = '5';
+    svgOverlay.setAttribute('viewBox', '0 0 100 100');
+
+    const horizontalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    horizontalLine.setAttribute('x1', '2.5');
+    horizontalLine.setAttribute('y1', '20');
+    horizontalLine.setAttribute('x2', '97.5');
+    horizontalLine.setAttribute('y2', '20');
+    horizontalLine.setAttribute('stroke', '#000000');
+    horizontalLine.setAttribute('stroke-width', '0.15');
+    svgOverlay.appendChild(horizontalLine);
+
+    const containerDiv = document.createElement('div');
+    containerDiv.className = 'vertical-text-container';
+
+    const textDiv = document.createElement('div');
+    textDiv.className = 'vertical-text';
+
+    pageLines.forEach((lineObj, lineIndex) => {
+        if (lineObj.isScene) {
+            const lineDiv = document.createElement('div');
+            lineDiv.textContent = lineObj.text;
+            lineDiv.classList.add('scene-line');
+            if (lineObj.originalLineIndex !== undefined) {
+                lineDiv.dataset.lineIndex = lineObj.originalLineIndex;
+            }
+            textDiv.appendChild(lineDiv);
+        } else {
+            const lineSpan = document.createElement('span');
+            const lineText = lineObj.text;
+            const trimmedLineText = lineText.trimEnd();
+            const isDialogueLine = trimmedLineText.endsWith('」') || trimmedLineText.endsWith('』');
+            const quoteStartIndex = lineText.search(/[「『]/);
+
+            if (isDialogueLine && quoteStartIndex > 0) {
+                const prefixText = lineText.slice(0, quoteStartIndex);
+                const alignedPrefixText = normalizeDialoguePrefixForPreview(prefixText);
+                const quoteAndAfter = lineText.slice(quoteStartIndex);
+                appendDialoguePrefixWithFixedSpaces(lineSpan, alignedPrefixText);
+                lineSpan.appendChild(document.createTextNode(quoteAndAfter));
+            } else {
+                lineSpan.textContent = lineText;
+            }
+
+            if (lineObj.originalLineIndex !== undefined) {
+                lineSpan.dataset.lineIndex = lineObj.originalLineIndex;
+            }
+
+            if (lineIndex < pageLines.length - 1) {
+                lineSpan.appendChild(document.createTextNode('\n'));
+            }
+
+            textDiv.appendChild(lineSpan);
+        }
+    });
+
+    const pageNumberDiv = document.createElement('div');
+    pageNumberDiv.className = 'page-number';
+    pageNumberDiv.textContent = `${index + 1}`;
+
+    containerDiv.appendChild(textDiv);
+    paperDiv.appendChild(containerDiv);
+    paperDiv.appendChild(svgOverlay);
+    paperDiv.appendChild(pageNumberDiv);
+    pageDiv.appendChild(paperDiv);
+
+    return pageDiv;
+}
+
 function updateVerticalDisplay() {
     const startTime = performance.now();
-    // DOM要素取得
     const editor = document.getElementById('editor');
     const pagesContainer = document.getElementById('pages-container');
 
-    // テキスト → ページ変換
     const pages = formatVerticalTextToPages(editor.value);
 
-    // 既存表示クリア
     pagesContainer.innerHTML = '';
-
-    // 
-    // ========== 各ページHTML生成 ==========
-    // 
     pages.forEach((pageLines, index) => {
-        // ページ全体コンテナ
-        const pageDiv = document.createElement('div');
-        pageDiv.className = 'mb-4'; // ページ間マージン
-
-        // B5用紙コンテナ
-        const paperDiv = document.createElement('div');
-        paperDiv.className = 'b5-paper';
-
-        // 
-        // ========== SVGオーバーレイ：水平線描画 ==========
-        // 
-        const svgOverlay = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svgOverlay.style.position = 'absolute'; // 絶対位置
-        svgOverlay.style.top = '0';
-        svgOverlay.style.left = '0';
-        svgOverlay.style.width = '100%';
-        svgOverlay.style.height = '100%';
-        svgOverlay.style.pointerEvents = 'none'; // マウス透過
-        svgOverlay.style.zIndex = '5'; // テキスト前面
-        svgOverlay.setAttribute('viewBox', '0 0 100 100');
-
-        // 水平線要素
-        const horizontalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        horizontalLine.setAttribute('x1', '2.5'); // 左端2.5%
-        horizontalLine.setAttribute('y1', '20'); // 上から20%
-        horizontalLine.setAttribute('x2', '97.5'); // 右端97.5%
-        horizontalLine.setAttribute('y2', '20'); // 水平線
-        horizontalLine.setAttribute('stroke', '#000000'); // 黒色
-        horizontalLine.setAttribute('stroke-width', '0.15'); // 細線
-
-        svgOverlay.appendChild(horizontalLine);
-
-        // 
-        // ========== 縦書きテキスト部分 ==========
-        // 
-        const containerDiv = document.createElement('div');
-        containerDiv.className = 'vertical-text-container';
-
-        const textDiv = document.createElement('div');
-        textDiv.className = 'vertical-text';
-
-        // 各行のHTML要素生成
-        pageLines.forEach((lineObj, lineIndex) => {
-            if (lineObj.isScene) {
-                // 柱書：div要素使用（特別スタイル適用）
-                const lineDiv = document.createElement('div');
-                lineDiv.textContent = lineObj.text;
-                lineDiv.classList.add('scene-line');
-                if (lineObj.originalLineIndex !== undefined) {
-                    lineDiv.dataset.lineIndex = lineObj.originalLineIndex;
-                }
-                textDiv.appendChild(lineDiv);
-            } else {
-                // 通常行：span要素使用
-                const lineSpan = document.createElement('span');
-                const lineText = lineObj.text;
-                const trimmedLineText = lineText.trimEnd();
-                const isDialogueLine = trimmedLineText.endsWith('」') || trimmedLineText.endsWith('』');
-                const quoteStartIndex = lineText.search(/[「『]/);
-
-                if (isDialogueLine && quoteStartIndex > 0) {
-                    const prefixText = lineText.slice(0, quoteStartIndex);
-                    const alignedPrefixText = normalizeDialoguePrefixForPreview(prefixText);
-                    const quoteAndAfter = lineText.slice(quoteStartIndex);
-                    appendDialoguePrefixWithFixedSpaces(lineSpan, alignedPrefixText);
-                    lineSpan.appendChild(document.createTextNode(quoteAndAfter));
-                } else {
-                    lineSpan.textContent = lineText;
-                }
-
-                if (lineObj.originalLineIndex !== undefined) {
-                    lineSpan.dataset.lineIndex = lineObj.originalLineIndex;
-                }
-
-                // 最終行以外は改行追加
-                if (lineIndex < pageLines.length - 1) {
-                    lineSpan.appendChild(document.createTextNode('\n'));
-                }
-
-                textDiv.appendChild(lineSpan);
-            }
-        });
-
-        // ページ番号
-        const pageNumberDiv = document.createElement('div');
-        pageNumberDiv.className = 'page-number';
-        pageNumberDiv.textContent = `${index + 1}`; // 1開始番号
-
-        // 
-        // ========== DOM構造構築 ==========
-        // 
-        containerDiv.appendChild(textDiv);
-        paperDiv.appendChild(containerDiv);
-        paperDiv.appendChild(svgOverlay);
-        paperDiv.appendChild(pageNumberDiv);
-        pageDiv.appendChild(paperDiv);
-        pagesContainer.appendChild(pageDiv);
+        pagesContainer.appendChild(createPageElement(pageLines, index));
     });
 
     // アウトラインタブが開いている場合は柱書リストを更新
@@ -511,13 +499,14 @@ let activeTab = 'usage'; // 'usage' | 'outline'
 async function saveText(forceNewFile = false) {
     const editor = document.getElementById('editor');
     const text = editor.value;
-    const now = new Date();
-    const filename = `台本_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.txt`;
 
     if (!text.trim()) {
         showNotification('保存するテキストがありません。', 'warning');
         return;
     }
+
+    const now = new Date();
+    const filename = `台本_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.txt`;
 
     // File System Access API対応ブラウザでの処理
     if ('showSaveFilePicker' in window) {
@@ -810,18 +799,19 @@ function buildSceneList() {
     let found = false;
 
     lines.forEach((line, lineIndex) => {
-        const manualMatch = line.trim().match(MANUAL_SCENE_REGEX);
-        const autoMatch = !manualMatch && line.trim().match(AUTO_SCENE_REGEX);
+        const trimmed = line.trim();
+        const manualMatch = trimmed.match(MANUAL_SCENE_REGEX);
+        const autoMatch = !manualMatch && trimmed.match(AUTO_SCENE_REGEX);
         if (!manualMatch && !autoMatch) return;
         found = true;
 
         let label, rest;
         if (manualMatch) {
             label = manualMatch[1];
-            rest = line.replace(/^\s*【[^】]+】[◯○◎◇□＊☆]\s*/, '').trim();
+            rest = line.replace(MANUAL_SCENE_REPLACE_REGEX, '').trim();
         } else {
             label = String(sceneCounter++);
-            rest = line.replace(/^\s*[◯○◎◇□＊☆]\s*/, '').trim();
+            rest = line.replace(AUTO_SCENE_REPLACE_REGEX, '').trim();
         }
 
         const item = document.createElement('div');

@@ -196,8 +196,7 @@ html, body {
 */
 
 /* カラム背景・境界線 */
-.left-column,
-.right-column {
+.left-column {
     background-color: #f8f9fa;
 }
 
@@ -297,6 +296,7 @@ html, body {
 }
 
 .right-column {
+    background-color: #f8f9fa;
     display: flex;
     flex-direction: column;
     overflow: hidden;
