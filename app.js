@@ -85,7 +85,7 @@ function formatVerticalTextToPages(text) {
      * @returns {number} 最適改行位置インデックス
      */
     function findBreakPoint(text, maxLength) {
-        if (text.length <= maxLength) return maxLength; // 制限内ならそのまま
+        if (text.length <= maxLength) return text.length; // 制限内ならそのまま
 
         // 逆方向探索：最大5文字手前まで
         for (let i = maxLength; i > Math.max(1, maxLength - 5); i--) {

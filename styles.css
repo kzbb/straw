@@ -198,9 +198,6 @@ html, body {
 /* カラム背景・境界線 */
 .left-column {
     background-color: #f8f9fa;
-}
-
-.left-column {
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -539,7 +536,7 @@ html, body {
     /* アニメーション */
     opacity: 0;
     transform: translateX(100%);
-    transition: all 0.3s ease-in-out;
+    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
 }
 
 /* 通知状態 */
@@ -576,45 +573,82 @@ html, body {
 @media print {
     /* B5縦書き印刷設定 */
     @page {
-        size: B5 portrait; /* B5縦書き */
-        margin: 25mm 9mm 0mm 9mm; /* ページマージン */
+        size: 182mm 257mm; /* JIS B5（CSSの "B5" キーワードはISO B5になるため明示指定） */
+        margin: 25mm 9mm 0mm 9mm;
+    }
+
+    /* min-widthを解除：残ったままだとブラウザが縮小印刷する */
+    html, body, .container-fluid {
+        min-width: 0 !important;
     }
 
     /* 印刷対象以外を非表示 */
-    * {
-        visibility: hidden;
+    .left-column,
+    #divider-left,
+    .center-column,
+    #divider-right {
+        display: none !important;
     }
 
-    #pages-container,
-    #pages-container * {
-        visibility: visible;
+    /* プレビューヘッダー（印刷ボタン等）を非表示 */
+    .right-column > .column-content > .d-flex {
+        display: none !important;
     }
 
-    /* 印刷レイアウト調整 */
-    #pages-container {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        /* B5 印刷スケール算出根拠：
-           プレビュー紙 400×560px をブラウザの印刷エンジンで B5 (182×257mm) に
-           合わせるための実測値。ブラウザ／OS のデフォルト DPI 設定によっては
-           ズレが生じる場合があり、その際はこの値を調整する。 */
-        transform: scale(2.28);
-        transform-origin: top left;
+    /* 右カラムをページ全幅に展開 */
+    .row {
+        display: block;
     }
 
+    .right-column {
+        display: block;
+        width: 100% !important;
+        overflow: visible;
+        background: white;
+    }
+
+    .column-content {
+        padding: 0;
+        overflow: visible;
+        height: auto;
+    }
+
+    /* ページ間マージンをリセット */
+    #pages-container > div {
+        margin: 0 !important;
+    }
+
+    /* B5実寸（コンテンツエリア = 182mm - 9mm×2 = 164mm、257mm - 25mm = 232mm） */
     .b5-paper {
+        width: 164mm;
+        height: 232mm;
         page-break-after: always;
-        margin: 0 0 20px 0;
+        break-after: page;
+        margin: 0;
         max-width: none;
-        width: 400px;
-        height: 560px;
         box-shadow: none;
+    }
+
+    /* 最後のページのブレークを解除（空白ページ防止） */
+    #pages-container > div:last-child .b5-paper {
+        page-break-after: auto;
+        break-after: auto;
     }
 
     .vertical-text-container {
         border: none;
+    }
+
+    /* プレビュー400×560pxからB5実寸へ比例換算。
+       font-size: 164mm÷(17列×line-height1.8) ≒ 14pt
+       top: (15+151)/560×232mm - 5em ≒ calc(69mm - 5em)
+       height: 100% - (30+151)/560×232mm + 5em ≒ calc(100% - 75mm + 5em) */
+    .vertical-text {
+        font-size: 14pt;
+        right: 6mm;
+        top: calc(69mm - 5em);
+        width: calc(100% - 12mm);
+        height: calc(100% - 75mm + 5em);
     }
 
     .page-number {
