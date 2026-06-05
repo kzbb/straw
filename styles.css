@@ -340,6 +340,24 @@ html, body {
     flex-shrink: 0;
 }
 
+.titleInput {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-right: 0.75rem;
+    padding: 0.3rem 0.6rem;
+    font-size: 1.2rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    background-color: #fff;
+    color: #212529;
+}
+
+.titleInput:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
 .editor-container {
     flex: 1;
     min-height: 0;
@@ -417,6 +435,28 @@ html, body {
     background-color: #ffffff;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     position: relative;
+}
+
+/* 表紙タイトルコンテナ */
+.title-cover-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 20px;
+    box-sizing: border-box;
+}
+
+/* 表紙タイトルテキスト */
+.title-cover-text {
+    writing-mode: vertical-rl;
+    font-family: 'MS Mincho', 'Yu Mincho', 'Hiragino Mincho ProN', serif;
+    white-space: nowrap;
+    color: #333;
 }
 
 /* 縦書きテキストコンテナ */
@@ -639,6 +679,12 @@ html, body {
         border: none;
     }
 
+    /* 印刷紙面(232mm)÷プレビュー紙面(560px@96dpi≒148mm)≒1.566倍でプレビューと同比率に */
+    /* インラインstyleより優先させるため!importantが必要 */
+    .title-cover-text {
+        font-size: calc(var(--title-font-px) * 1.566px) !important;
+    }
+
     /* プレビュー400×560pxからB5実寸へ比例換算。
        font-size: 164mm÷(17列×line-height1.8) ≒ 14pt
        top: (15+151)/560×232mm - 5em ≒ calc(69mm - 5em)
@@ -654,5 +700,6 @@ html, body {
     .page-number {
         display: block;
         visibility: visible;
+        font-size: 12pt;
     }
 }

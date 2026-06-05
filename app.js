@@ -370,10 +370,53 @@ function normalizeDialoguePrefixForPreview(prefixText) {
  */
 
 /**
- * @param {Array<Object>} pageLines
- * @param {number} index
- * @returns {HTMLElement}
+ * @param {HTMLElement} titleText
  */
+function adjustTitleFontSize(titleText) {
+    const container = titleText.parentElement;
+    if (!container) return;
+    // プレビュー紙面(560px)と印刷紙面(232mm = 876.8px@96dpi)の比率で縮小
+    const PRINT_SCALE = 560 / (232 * 96 / 25.4); // ≈ 0.639
+    const maxH = container.clientHeight * PRINT_SCALE;
+    const maxW = container.clientWidth * PRINT_SCALE;
+
+    let lo = 10, hi = 120;
+    titleText.style.fontSize = hi + 'px';
+
+    while (lo < hi) {
+        const mid = Math.ceil((lo + hi) / 2);
+        titleText.style.fontSize = mid + 'px';
+        if (titleText.offsetHeight <= maxH && titleText.offsetWidth <= maxW) {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    titleText.style.setProperty('--title-font-px', lo.toString());
+    titleText.style.fontSize = lo + 'px';
+}
+
+function createTitlePageElement(title) {
+    const pageDiv = document.createElement('div');
+    pageDiv.className = 'mb-4';
+
+    const paperDiv = document.createElement('div');
+    paperDiv.className = 'b5-paper';
+
+    const coverContainer = document.createElement('div');
+    coverContainer.className = 'title-cover-container';
+
+    const titleText = document.createElement('div');
+    titleText.className = 'title-cover-text';
+    titleText.textContent = title;
+
+    coverContainer.appendChild(titleText);
+    paperDiv.appendChild(coverContainer);
+    pageDiv.appendChild(paperDiv);
+
+    return pageDiv;
+}
+
 function createPageElement(pageLines, index) {
     const pageDiv = document.createElement('div');
     pageDiv.className = 'mb-4';
@@ -465,6 +508,15 @@ function updateVerticalDisplay() {
     const pages = formatVerticalTextToPages(editor.value);
 
     pagesContainer.innerHTML = '';
+
+    const title = document.querySelector('.titleInput')?.value?.trim();
+    if (title) {
+        const titlePage = createTitlePageElement(title);
+        pagesContainer.appendChild(titlePage);
+        const titleText = titlePage.querySelector('.title-cover-text');
+        if (titleText instanceof HTMLElement) adjustTitleFontSize(titleText);
+    }
+
     pages.forEach((pageLines, index) => {
         pagesContainer.appendChild(createPageElement(pageLines, index));
     });
@@ -498,6 +550,8 @@ let activeTab = 'usage'; // 'usage' | 'outline'
 
 async function saveText(forceNewFile = false) {
     const editor = document.getElementById('editor');
+    const titleInput = document.querySelector('.titleInput');
+    const title = titleInput?.value?.trim() || '';
     const text = editor.value;
 
     if (!text.trim()) {
@@ -506,7 +560,9 @@ async function saveText(forceNewFile = false) {
     }
 
     const now = new Date();
-    const filename = `台本_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.txt`;
+    const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+    const filename = title ? `${title}_${timestamp}.txt` : `台本_${timestamp}.txt`;
+    const contentToSave = title ? `${title}\n\n${text}` : text;
 
     // File System Access API対応ブラウザでの処理
     if ('showSaveFilePicker' in window) {
@@ -514,7 +570,7 @@ async function saveText(forceNewFile = false) {
             // 上書き保存：既存ファイルがある && 新規保存を強制しない場合
             if (currentFileHandle && !forceNewFile) {
                 const writable = await currentFileHandle.createWritable();
-                await writable.write(text);
+                await writable.write(contentToSave);
                 await writable.close();
                 showNotification(`「${currentFileName}」を上書き保存しました。`, 'success');
                 return;
@@ -530,7 +586,7 @@ async function saveText(forceNewFile = false) {
             });
 
             const writable = await fileHandle.createWritable();
-            await writable.write(text);
+            await writable.write(contentToSave);
             await writable.close();
 
             // ファイルハンドルと名前を保存
@@ -547,7 +603,7 @@ async function saveText(forceNewFile = false) {
     }
 
     // 従来方式（上書き保存不可）
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const blob = new Blob([contentToSave], { type: 'text/plain;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = filename;
@@ -640,6 +696,7 @@ function handleEditorInput() {
 }
 
 document.getElementById('editor').addEventListener('input', handleEditorInput);
+document.querySelector('.titleInput').addEventListener('input', updateVerticalDisplay);
 
 /**
  * 印刷実行関数
@@ -671,8 +728,23 @@ async function loadText() {
             const file = await fileHandle.getFile();
             const content = await file.text();
 
+            // タイトル行と本文を分離（2行目が空行の場合のみタイトルと認識）
+            const lines = content.split('\n');
+            const firstLine = lines[0];
+            const secondLine = lines[1];
+            const isTitle = firstLine && secondLine === '' && !firstLine.startsWith(' ') && !firstLine.match(/^[\s\S]*[\[\]◯○◎◇□＊☆]/);
+
+            const titleInput = document.querySelector('.titleInput');
             const editor = document.getElementById('editor');
-            editor.value = content;
+
+            if (isTitle) {
+                titleInput.value = firstLine;
+                editor.value = lines.slice(2).join('\n');
+            } else {
+                titleInput.value = '';
+                editor.value = content;
+            }
+
             updateVerticalDisplay();
 
             // ファイルハンドルを保存（上書き保存用）
@@ -725,8 +797,24 @@ function handleFileSelect(event) {
     reader.onload = function(e) {
         try {
             const content = e.target.result;
+
+            // タイトル行と本文を分離（2行目が空行の場合のみタイトルと認識）
+            const lines = content.split('\n');
+            const firstLine = lines[0];
+            const secondLine = lines[1];
+            const isTitle = firstLine && secondLine === '' && !firstLine.startsWith(' ') && !firstLine.match(/^[\s\S]*[\[\]◯○◎◇□＊☆]/);
+
+            const titleInput = document.querySelector('.titleInput');
             const editor = document.getElementById('editor');
-            editor.value = content;
+
+            if (isTitle) {
+                titleInput.value = firstLine;
+                editor.value = lines.slice(2).join('\n');
+            } else {
+                titleInput.value = '';
+                editor.value = content;
+            }
+
             updateVerticalDisplay();
 
             // 従来方式ではファイルハンドルは取得できないため、リセット
