@@ -504,6 +504,8 @@ function updateVerticalDisplay() {
     const startTime = performance.now();
     const editor = document.getElementById('editor');
     const pagesContainer = document.getElementById('pages-container');
+    const scrollEl = pagesContainer?.closest('.column-content');
+    const savedScrollTop = scrollEl instanceof HTMLElement ? scrollEl.scrollTop : 0;
 
     const pages = formatVerticalTextToPages(editor.value);
 
@@ -520,6 +522,8 @@ function updateVerticalDisplay() {
     pages.forEach((pageLines, index) => {
         pagesContainer.appendChild(createPageElement(pageLines, index));
     });
+
+    if (scrollEl instanceof HTMLElement) scrollEl.scrollTop = savedScrollTop;
 
     // アウトラインタブが開いている場合は柱書リストを更新
     if (activeTab === 'outline') buildSceneList();
@@ -859,6 +863,37 @@ document.getElementById('scene-list').addEventListener('click', (e) => {
 document.getElementById('pages-container').addEventListener('click', (e) => {
     const el = e.target.closest('[data-line-index]');
     if (el) jumpEditor(parseInt(el.dataset.lineIndex, 10));
+});
+
+// エディタのカーソル移動でプレビューの対応行にスクロール
+/** @type {ReturnType<typeof setTimeout> | undefined} */
+let _previewSyncTimer;
+const _editorEl = /** @type {HTMLTextAreaElement} */ (document.getElementById('editor'));
+_editorEl.addEventListener('selectionchange', () => {
+    clearTimeout(_previewSyncTimer);
+    _previewSyncTimer = setTimeout(() => {
+        if (document.activeElement !== _editorEl) return;
+        const lineIndex = _editorEl.value.substring(0, _editorEl.selectionStart ?? 0).split('\n').length - 1;
+        const pagesContainer = document.getElementById('pages-container');
+        if (!pagesContainer) return;
+        let el = pagesContainer.querySelector(`[data-line-index="${lineIndex}"]`);
+        if (!el) {
+            for (let d = 1; d <= 30 && !el; d++) {
+                el = pagesContainer.querySelector(`[data-line-index="${lineIndex - d}"]`) ||
+                     pagesContainer.querySelector(`[data-line-index="${lineIndex + d}"]`);
+            }
+        }
+        if (!el) return;
+        const scrollEl = /** @type {HTMLElement | null} */ (pagesContainer.closest('.column-content'));
+        if (!scrollEl) return;
+        const scrollRect = scrollEl.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+        // 要素がすでに可視域内なら何もしない
+        if (elRect.top >= scrollRect.top && elRect.bottom <= scrollRect.bottom) return;
+        // 要素を縦中央に来るようスクロール
+        const targetScrollTop = scrollEl.scrollTop + (elRect.top - scrollRect.top) - scrollEl.clientHeight / 2;
+        scrollEl.scrollTo({ top: Math.max(0, targetScrollTop), behavior: 'smooth' });
+    }, 120);
 });
 
 /*
