@@ -699,8 +699,14 @@ function handleEditorInput() {
     updateVerticalDisplay();
 }
 
+const DEFAULT_TITLE = document.title;
+
 document.getElementById('editor').addEventListener('input', handleEditorInput);
-document.querySelector('.titleInput').addEventListener('input', updateVerticalDisplay);
+document.querySelector('.titleInput').addEventListener('input', () => {
+    const workTitle = document.querySelector('.titleInput').value.trim();
+    document.title = workTitle || DEFAULT_TITLE;
+    updateVerticalDisplay();
+});
 
 /**
  * 印刷実行関数
