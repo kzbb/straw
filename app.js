@@ -761,6 +761,8 @@ async function loadText() {
             currentFileHandle = fileHandle;
             currentFileName = fileHandle.name;
 
+            if (buildSceneList()) switchLeftTab('outline');
+
             showNotification(`ファイル「${fileHandle.name}」を読み込みました。`, 'success');
         } catch (error) {
             if (error.name === 'AbortError') return; // ユーザーキャンセル
@@ -830,6 +832,8 @@ function handleFileSelect(event) {
             // 従来方式ではファイルハンドルは取得できないため、リセット
             currentFileHandle = null;
             currentFileName = file.name;
+
+            if (buildSceneList()) switchLeftTab('outline');
 
             showNotification(`ファイル「${file.name}」を読み込みました。`, 'success');
         } catch (error) {
@@ -966,6 +970,8 @@ function buildSceneList() {
         empty.textContent = '柱書がありません';
         container.appendChild(empty);
     }
+
+    return found;
 }
 
 // エディターとプレビューの両方にジャンプ
