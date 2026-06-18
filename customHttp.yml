@@ -1,0 +1,31 @@
+customHeaders:
+  # CSS/JS/SVGは長期キャッシュ（クエリ文字列バージョニングで更新を保証）
+  - pattern: '**/*.js'
+    headers:
+      - key: 'Cache-Control'
+        value: 'public, max-age=31536000, immutable'
+  - pattern: '**/*.css'
+    headers:
+      - key: 'Cache-Control'
+        value: 'public, max-age=31536000, immutable'
+  - pattern: '**/*.svg'
+    headers:
+      - key: 'Cache-Control'
+        value: 'public, max-age=31536000, immutable'
+  # エントリポイントと制御ファイルは常に再検証（上記パターンを上書き）
+  - pattern: '/sw.js'
+    headers:
+      - key: 'Cache-Control'
+        value: 'no-cache, max-age=0, must-revalidate'
+  - pattern: '/'
+    headers:
+      - key: 'Cache-Control'
+        value: 'no-cache, max-age=0, must-revalidate'
+  - pattern: '/index.html'
+    headers:
+      - key: 'Cache-Control'
+        value: 'no-cache, max-age=0, must-revalidate'
+  - pattern: '/manifest.json'
+    headers:
+      - key: 'Cache-Control'
+        value: 'no-cache, max-age=0, must-revalidate'
