@@ -171,10 +171,21 @@
                 <div class="col-5 center-column">
                     <!-- エディターメニューバー -->
                     <div class="editor-menu-bar">
-                        <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex justify-content-between align-items-center editor-menu-row">
+                            <div class="mobile-panel-controls" aria-label="サイドパネル切替">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="showLeftPanel()">
+                                    使い方
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="showRightPanel()">
+                                    プレビュー
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="hideSidePanels()">
+                                    閉じる
+                                </button>
+                            </div>
                             <!-- <h5 class="mb-0">テキストエディター</h5> -->
                              <input type="text" class="titleInput" placeholder="タイトル">
-                            <div>
+                            <div class="file-controls">
                                 <!-- ファイル操作ボタン群 -->
                                 <button class="btn btn-outline-primary btn-sm me-2" onclick="loadText()">
                                     ファイルを開く
@@ -229,6 +240,7 @@
                     </div>
                 </div>
             </div>
+            <div class="panel-backdrop" onclick="hideSidePanels()"></div>
         </div>
 
         <script src="app.js?v=26.6.19"></script>

@@ -977,7 +977,12 @@ function buildSceneList() {
 // エディターとプレビューの両方にジャンプ
 function jumpToScene(lineIndex) {
     jumpEditor(lineIndex);
-    jumpPreview(lineIndex);
+    const mobileControls = document.querySelector('.mobile-panel-controls');
+    if (mobileControls && getComputedStyle(mobileControls).display !== 'none') {
+        hideSidePanels();
+    } else {
+        jumpPreview(lineIndex);
+    }
 }
 
 /*
@@ -1072,8 +1077,9 @@ function initResizers() {
     function initWidths() {
         const totalWidth = row.getBoundingClientRect().width;
         const available = totalWidth - DIVIDER_WIDTH * 2;
-        const leftWidth = Math.floor(available * 0.1667);
-        const centerWidth = Math.floor(available * 0.4167);
+        const leftWidth = 260;
+        const rightTarget = 440; // B5用紙(400px) × 110% + padding(40px)
+        const centerWidth = Math.max(MIN_CENTER, available - leftWidth - rightTarget);
         leftCol.style.width = leftWidth + 'px';
         centerCol.style.width = centerWidth + 'px';
     }
@@ -1153,6 +1159,7 @@ function initResizers() {
 
 initResizers();
 
+
 // キーボードショートカット（Cmd+S）でファイル保存
 document.addEventListener('keydown', function(event) {
     // Macの場合：Cmd+S、WindowsLinuxの場合：Ctrl+S
@@ -1161,3 +1168,40 @@ document.addEventListener('keydown', function(event) {
         saveText(); // 既存の保存関数を呼び出し
     }
 });
+
+/*
+========================================
+狭幅・縦長ビューポート用：サイドパネル切替
+========================================
+*/
+
+/**
+ * 左の使い方・アウトラインパネルを表示する
+ */
+function showLeftPanel() {
+    if (document.body.classList.contains('show-left-panel')) {
+        hideSidePanels();
+    } else {
+        document.body.classList.add('show-left-panel');
+        document.body.classList.remove('show-right-panel');
+    }
+}
+
+/**
+ * 右のプレビューパネルを表示する
+ */
+function showRightPanel() {
+    if (document.body.classList.contains('show-right-panel')) {
+        hideSidePanels();
+    } else {
+        document.body.classList.add('show-right-panel');
+        document.body.classList.remove('show-left-panel');
+    }
+}
+
+/**
+ * 左右のサイドパネルを閉じる
+ */
+function hideSidePanels() {
+    document.body.classList.remove('show-left-panel', 'show-right-panel');
+}

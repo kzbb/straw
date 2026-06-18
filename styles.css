@@ -340,6 +340,25 @@ html, body {
     flex-shrink: 0;
 }
 
+.editor-menu-row {
+    gap: 12px;
+}
+
+.mobile-panel-controls {
+    display: none;
+    gap: 6px;
+    flex-wrap: nowrap;
+    align-items: center;
+}
+
+.file-controls {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
 .titleInput {
     flex: 1 1 auto;
     min-width: 0;
@@ -546,6 +565,147 @@ html, body {
     margin-left: 0.5em;
     margin-right: 0.5em;
     height: calc(29em + 5em);
+}
+
+/*
+========================================
+4.1. 狭幅・縦長ビューポート対応
+========================================
+*/
+
+/* 横幅が足りない場合は左右カラムを畳み、中央エディターを主画面にする */
+@media screen and (max-width: 900px), screen and (orientation: portrait) {
+    html, body {
+        min-width: 0;
+    }
+
+    .container-fluid,
+    .full-height {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .row.full-height {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .center-column {
+        flex: 1 1 100%;
+        width: 100% !important;
+        min-width: 0;
+    }
+
+    .left-column,
+    .right-column {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        z-index: 100;
+        width: min(82vw, 360px) !important;
+        min-width: 0;
+        max-width: none;
+        box-shadow: 0 0 18px rgba(0,0,0,0.18);
+        transition: transform 0.2s ease-in-out;
+    }
+
+    .left-column {
+        left: 0;
+        transform: translateX(-100%);
+    }
+
+    .right-column {
+        right: 0;
+        transform: translateX(100%);
+    }
+
+    /* JS側で body に .show-left-panel / .show-right-panel を付けると表示される */
+    body.show-left-panel .left-column {
+        transform: translateX(0);
+    }
+
+    body.show-right-panel .right-column {
+        transform: translateX(0);
+    }
+
+    body.show-right-panel .left-column {
+        transform: translateX(-100%);
+    }
+
+    .col-divider {
+        display: none;
+    }
+
+    .editor-menu-bar {
+        padding: 10px 12px;
+    }
+
+    .editor-menu-row {
+        flex-wrap: wrap;
+        align-items: stretch !important;
+        justify-content: flex-start !important;
+    }
+
+    .mobile-panel-controls {
+        display: flex;
+        order: 1;
+        flex: 0 0 100%;
+    }
+
+    .mobile-panel-controls .btn {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .titleInput {
+        order: 2;
+        flex: 1 1 100%;
+        width: 100%;
+        margin-right: 0;
+    }
+
+    .file-controls {
+        order: 3;
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .column-content,
+    .code-editor,
+    .code-editor-mirror {
+        padding: 12px;
+    }
+
+    body.show-left-panel .panel-backdrop,
+    body.show-right-panel .panel-backdrop {
+        display: block;
+    }
+
+    body.show-left-panel .mobile-panel-controls .btn:nth-child(1),
+    body.show-right-panel .mobile-panel-controls .btn:nth-child(2) {
+        background-color: #0d6efd;
+        color: #fff;
+        border-color: #0d6efd;
+    }
+
+    /* 中央タップで閉じる操作で代替するため「閉じる」ボタンを非表示 */
+    .mobile-panel-controls .btn:nth-child(3) {
+        display: none;
+    }
+}
+
+/*
+========================================
+4.2. パネルバックドロップ
+========================================
+*/
+
+.panel-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.3);
+    z-index: 99;
 }
 
 /*
