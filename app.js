@@ -52,7 +52,7 @@ function formatVerticalTextToPages(text) {
     // 
     // ========== 日本語禁則処理設定 ==========
     // 
-    const startChars = '。、？！」』）〕］｝〉》】〗〙〛ー：；'; // 行頭禁止文字
+    const startChars = '。、？！」』）〕］｝〉》】〗〙〛ー：；・ぁぃぅぇぉっゃゅょゎゐゑァィゥェォッャュョヮヵヶ'; // 行頭禁止文字
     const endChars = '「『（〔［｛〈《【〖〘〚';                // 行末禁止文字
     /**
      * 禁則処理判定関数
@@ -197,21 +197,21 @@ function formatVerticalTextToPages(text) {
         const indentMatch = line.match(/^(\s*)/);
         const baseIndent = indentMatch ? indentMatch[1] : '';
 
+        // セリフ行判定：元行全体でカギカッコ終了チェック
+        const originalLineEndsWithQuote = line.trim().endsWith('」') || line.trim().endsWith('』');
+
         if (line.length <= maxCharsPerLine) {
             // 1行以内：そのまま追加
-            allFormattedLines.push({ text: line, isScene: false, originalLineIndex: lineIdx });
+            allFormattedLines.push({ text: line, isScene: false, originalLineIndex: lineIdx, isDialogueLine: originalLineEndsWithQuote });
         } else {
-            // 
+            //
             // ========== 29文字超過：自動折り返し処理 ==========
-            // 
+            //
 
             // 第1行の改行位置決定
             const firstLineBreak = findBreakPoint(line, maxCharsPerLine);
             const firstLine = line.substring(0, firstLineBreak);
-            allFormattedLines.push({ text: firstLine, isScene: false, originalLineIndex: lineIdx });
-
-            // セリフ行判定：元行全体でカギカッコ終了チェック
-            const originalLineEndsWithQuote = line.trim().endsWith('」') || line.trim().endsWith('』');
+            allFormattedLines.push({ text: firstLine, isScene: false, originalLineIndex: lineIdx, isDialogueLine: originalLineEndsWithQuote });
 
             // 残りテキスト処理
             let remainingText = line.substring(firstLineBreak);
@@ -461,11 +461,9 @@ function createPageElement(pageLines, index) {
         } else {
             const lineSpan = document.createElement('span');
             const lineText = lineObj.text;
-            const trimmedLineText = lineText.trimEnd();
-            const isDialogueLine = trimmedLineText.endsWith('」') || trimmedLineText.endsWith('』');
             const quoteStartIndex = lineText.search(/[「『]/);
 
-            if (isDialogueLine && quoteStartIndex > 0) {
+            if (lineObj.isDialogueLine && quoteStartIndex > 0) {
                 const prefixText = lineText.slice(0, quoteStartIndex);
                 const alignedPrefixText = normalizeDialoguePrefixForPreview(prefixText);
                 const quoteAndAfter = lineText.slice(quoteStartIndex);
