@@ -32,6 +32,7 @@ https://straw.bblab.org/
 | `customHttp.yml` | Amplifyの配信キャッシュ設定 |
 | `test/` | `format.js`の回帰テスト |
 | `tools/` | 保守用スクリプト |
+| `jsconfig.json` | 型チェック（`@ts-check`）の設定 |
 
 `index.html`は`format.js`→`app.js`の順に読み込みます（`app.js`が
 `format.js`のグローバル関数に依存しているため、順序を入れ替えると動きません）。
@@ -47,6 +48,19 @@ node --test test/format.test.js
 折り返し・禁則処理・柱書の採番・タイトル判定に加えて、
 JSとCSS/HTMLに分かれている数値（1行の文字数、印刷倍率、バージョン文字列）が
 一致しているかも検証します。
+
+### 型チェック
+
+`format.js`と`app.js`は先頭に`// @ts-check`を付けてJSDocで型を書いています。
+エラーが出ない状態を保ってください。
+
+```sh
+npx tsc -p jsconfig.json
+```
+
+`jsconfig.json`が必要なのは、2つのファイルを1つのプロジェクトとして
+検査させるためです。これがないとエディターが`app.js`を単独で見てしまい、
+`format.js`のグローバル関数を「未定義」と誤報告します。
 
 ### リリース手順
 

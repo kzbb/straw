@@ -202,6 +202,16 @@ function wrapLine(text, maxWidth, continuationIndent) {
 }
 
 /**
+ * 整形後の1行。プレビュー1列ぶんに対応する。
+ *
+ * @typedef {Object} FormattedLine
+ * @property {string} text - 表示するテキスト（字下げを含む）
+ * @property {boolean} isScene - 柱書行か
+ * @property {number} [originalLineIndex] - 元テキストでの行番号（紙面を埋める空行には無い）
+ * @property {boolean} [isDialogueLine] - セリフ行の1行目か（発言者名の描画に使う）
+ */
+
+/**
  * 縦書きB5ページ分割メイン関数
  *
  * 【機能概要】
@@ -212,14 +222,12 @@ function wrapLine(text, maxWidth, continuationIndent) {
  * - セリフ行処理：カギカッコ行の自動インデント
  *
  * @param {string} text - 入力テキスト（改行区切り・LF 正規化済み）
- * @returns {Array<Array<Object>>} ページ配列（各ページは行オブジェクトの配列）
- *   行オブジェクト形式：{ text: string, isScene: boolean,
- *                        originalLineIndex?: number, isDialogueLine?: boolean }
+ * @returns {FormattedLine[][]} ページ配列（各ページは行オブジェクトの配列）
  */
 function formatVerticalTextToPages(text) {
     const lines = text.split('\n');
 
-    /** @type {Array<Object>} */
+    /** @type {FormattedLine[]} */
     const allFormattedLines = [];
     let sceneNumber = 1; // 柱書連番カウンタ
 
@@ -338,9 +346,9 @@ function formatVerticalTextToPages(text) {
     // ========== ページ分割処理 ==========
     // 17行制限によるページ分割（柱書は SCENE_LINE_WEIGHT 行相当）
     //
-    /** @type {Array<Array<Object>>} */
+    /** @type {FormattedLine[][]} */
     const pages = [];
-    /** @type {Array<Object>} */
+    /** @type {FormattedLine[]} */
     let currentPage = [];
     let currentLineCount = 0;
 
@@ -458,11 +466,19 @@ function splitTitleAndBody(content) {
 テスト用エクスポート
 ========================================
 Node から require したときだけ有効。ブラウザでは module が未定義なので何もしない。
+
+【`module.exports = ...` と直接書かない理由】
+その形を書くと TypeScript がこのファイルを CommonJS モジュールと判定し、
+トップレベルの const / function がモジュールスコープ扱いになる。すると
+app.js 側から見えなくなり、@ts-check が formatVerticalTextToPages などを
+「定義されていない」と誤って報告する（実際のブラウザでは同じグローバル
+スコープを共有していて問題なく動く）。いったん変数へ受けることで
+スクリプトとして扱われ、型チェックが実態と一致する。
 */
-// @ts-ignore - module は Node 専用のグローバル
-if (typeof module !== "undefined" && module.exports) {
-    // @ts-ignore
-    module.exports = {
+// @ts-ignore - module は Node 実行時のみ存在するグローバル
+const nodeModule = typeof module === 'object' && module ? module : null;
+if (nodeModule) {
+    nodeModule.exports = {
         SCENE_SYMBOLS,
         MANUAL_SCENE_REGEX,
         AUTO_SCENE_REGEX,

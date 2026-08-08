@@ -330,11 +330,21 @@ html, body {
     flex-shrink: 0;
     transition: background-color 0.15s ease;
     z-index: 10;
+    /* タッチのドラッグをブラウザのスクロールに奪われないようにする
+       （これが無いとiPadで仕切りを動かせない） */
+    touch-action: none;
 }
 
 .col-divider:hover,
 .col-divider.dragging {
     background-color: #adb5bd;
+}
+
+/* キーボード操作時のフォーカス位置を見せる */
+.col-divider:focus-visible {
+    background-color: #0d6efd;
+    outline: 2px solid #0d6efd;
+    outline-offset: 1px;
 }
 
 /* カラム内コンテンツ共通 */
@@ -741,14 +751,24 @@ html, body {
 ========================================
 */
 
-/* 通知ベース */
-.notification {
-    /* 配置 */
+/* 通知を縦に積む領域（JS が必要になった時点で生成する） */
+#notification-area {
     position: fixed;
     top: 20px;
     right: 20px;
     z-index: 1000;
 
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+
+    /* 通知が下にあるボタン操作を邪魔しないようにする */
+    pointer-events: none;
+}
+
+/* 通知ベース */
+.notification {
     /* サイズ・外観 */
     padding: 15px 20px;
     max-width: 300px;

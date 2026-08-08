@@ -455,6 +455,62 @@ test('index.html は format.js を app.js より先に読み込む', () => {
     assert.ok(formatAt < appAt, 'app.js が format.js より先に読み込まれている');
 });
 
+/* ========================================
+   HTML / manifest の構造ガード
+
+   壊れても画面上は動いてしまう（が挙動や支援技術での読み上げが劣化する）
+   類の設定を、テストで固定しておく。
+   ======================================== */
+
+test('すべての button に type 属性がある', () => {
+    const html = readProjectFile('index.html');
+    const buttons = [...html.matchAll(/<button\b[^>]*>/g)].map((m) => m[0]);
+
+    assert.ok(buttons.length > 0, 'button が見つからない');
+    const missing = buttons.filter((tag) => !/\stype=/.test(tag));
+    assert.deepEqual(missing, [], 'type 属性の無い button がある');
+});
+
+test('カラム仕切りがキーボードと支援技術に対応している', () => {
+    const html = readProjectFile('index.html');
+    const dividers = [...html.matchAll(/<div class="col-divider"[\s\S]*?>/g)].map((m) => m[0]);
+
+    assert.equal(dividers.length, 2, '仕切りが2つ見つからない');
+    for (const divider of dividers) {
+        assert.match(divider, /role="separator"/);
+        assert.match(divider, /tabindex="0"/);
+        assert.match(divider, /aria-label=/);
+    }
+});
+
+test('左パネルのタブが tablist として組まれている', () => {
+    const html = readProjectFile('index.html');
+
+    assert.match(html, /role="tablist"/);
+    assert.equal((html.match(/role="tab"/g) ?? []).length, 2);
+    assert.equal((html.match(/role="tabpanel"/g) ?? []).length, 2);
+});
+
+test('manifest のアイコンが any と maskable に分かれている', () => {
+    const manifest = JSON.parse(readProjectFile('manifest.json'));
+    const purposes = manifest.icons.map((/** @type {{purpose: string}} */ icon) => icon.purpose);
+
+    // any と maskable を1つのエントリで兼用すると、通常表示で余白が過大になる
+    assert.deepEqual(purposes.sort(), ['any', 'maskable']);
+
+    for (const icon of manifest.icons) {
+        assert.doesNotThrow(
+            () => readProjectFile(icon.src),
+            `manifest が参照するアイコンが無い: ${icon.src}`
+        );
+    }
+});
+
+test('favicon が指定されている', () => {
+    const html = readProjectFile('index.html');
+    assert.match(html, /<link rel="icon"/, 'rel="icon" が無いと /favicon.ico に404が出る');
+});
+
 test('バージョン文字列が全箇所で一致している', () => {
     const html = readProjectFile('index.html');
     const sw = readProjectFile('sw.js');

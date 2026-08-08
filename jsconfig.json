@@ -1,0 +1,25 @@
+{
+  "// 目的": [
+    "format.js と app.js を1つのプロジェクトとして型チェックさせる設定。",
+    "この設定が無いとエディタが app.js を単独で検査してしまい、format.js の",
+    "グローバル関数を『定義されていない』と誤報告する（実際のブラウザでは",
+    "同じグローバルスコープを共有するので動く）。",
+    "",
+    "検査コマンド: npx tsc -p jsconfig.json",
+    "",
+    "test/ と tools/ は Node 用の CommonJS なので対象外にしている",
+    "（require や __dirname の型定義に @types/node が必要になるため）。",
+    "sw.js も Service Worker 固有のグローバルを使うため対象外。"
+  ],
+  "compilerOptions": {
+    "target": "es2020",
+    "lib": ["es2020", "dom", "dom.iterable"],
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "useUnknownInCatchVariables": true
+  },
+  "include": ["format.js", "app.js"]
+}

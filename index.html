@@ -5,9 +5,12 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>縦書き台本整形ツール</title>
         
-        <link rel="stylesheet" href="styles.css?v=26.8.8">
+        <meta name="description" content="ブラウザ上で動作する縦書き台本整形ツール。柱書・ト書き・セリフ行を自動認識し、B5サイズの縦書き原稿としてプレビュー・印刷できます。">
+
+        <link rel="stylesheet" href="styles.css?v=26.8.8a">
         <link rel="manifest" href="manifest.json">
         <meta name="theme-color" content="#2c3e50">
+        <link rel="icon" href="icon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="icon.svg">
     </head>
     
@@ -22,12 +25,16 @@
             <div class="row h-100">
                 <!-- 左カラム：使い方 / 柱書アウトライン -->
                 <div class="col-2 left-column">
-                    <div class="left-tab-bar">
-                        <button class="left-tab-btn active" id="tab-btn-usage" onclick="switchLeftTab('usage')">使い方</button>
-                        <button class="left-tab-btn" id="tab-btn-outline" onclick="switchLeftTab('outline')">柱書</button>
+                    <div class="left-tab-bar" role="tablist" aria-label="左パネルの表示切替">
+                        <button type="button" class="left-tab-btn active" id="tab-btn-usage"
+                                role="tab" aria-selected="true" aria-controls="panel-usage"
+                                onclick="switchLeftTab('usage')">使い方</button>
+                        <button type="button" class="left-tab-btn" id="tab-btn-outline"
+                                role="tab" aria-selected="false" aria-controls="panel-outline"
+                                onclick="switchLeftTab('outline')">柱書</button>
                     </div>
                     <div class="column-content">
-                        <div id="panel-usage" class="left-panel">
+                        <div id="panel-usage" class="left-panel" role="tabpanel" aria-labelledby="tab-btn-usage">
                         <h5>使い方</h5>
 
                         <!-- 基本操作説明 -->
@@ -130,7 +137,8 @@
                         <div class="mb-4">
                             <h6 class="text-primary">カラム幅の変更</h6>
                             <small class="text-muted">
-                                カラム間の仕切りをドラッグすると、各カラムの幅を自由に変更できます。
+                                カラム間の仕切りをドラッグすると、各カラムの幅を自由に変更できます。タッチ操作にも対応しています。<br>
+                                仕切りをキーボードで選んで左右キーを押しても変更できます（Shift併用で大きく動きます）。
                             </small>
                         </div>
                         
@@ -139,7 +147,7 @@
                             <a href="https://bblab.org/straw/" target="_blank" class="text-decoration-none text-primary">
                                 <small class="text-muted">
                                     <strong>縦書き台本整形ツール<br></strong>
-                                            ver.26.8.8
+                                            ver.26.8.8a
                                 </small>
                             </a>
                         </div>
@@ -164,13 +172,17 @@
 
                         </div><!-- /panel-usage -->
 
-                        <div id="panel-outline" class="left-panel" hidden>
+                        <div id="panel-outline" class="left-panel" hidden
+                             role="tabpanel" aria-labelledby="tab-btn-outline">
                             <div id="scene-list"></div>
                         </div><!-- /panel-outline -->
 
                     </div>
                 </div>
-                <div class="col-divider" id="divider-left"></div>
+                <div class="col-divider" id="divider-left"
+                     role="separator" tabindex="0" aria-orientation="vertical"
+                     aria-label="左カラムの幅（左右キーで変更）"
+                     aria-valuemin="0" aria-valuemax="100"></div>
 
                 <!--
                 ========================================
@@ -197,13 +209,13 @@
                              <input type="text" class="titleInput" placeholder="タイトル">
                             <div class="file-controls">
                                 <!-- ファイル操作ボタン群 -->
-                                <button class="btn btn-outline-primary btn-sm me-2" onclick="loadText()">
+                                <button type="button" class="btn btn-outline-primary btn-sm me-2" onclick="loadText()">
                                     ファイルを開く
                                 </button>
-                                <button class="btn btn-success btn-sm me-1" onclick="saveText()">
+                                <button type="button" class="btn btn-success btn-sm me-1" onclick="saveText()">
                                     保存
                                 </button>
-                                <button class="btn btn-outline-success btn-sm" onclick="saveAsText()">
+                                <button type="button" class="btn btn-outline-success btn-sm" onclick="saveAsText()">
                                     名前を付けて保存
                                 </button>
                                 <!-- 隠しファイル入力要素（プログラムからトリガー） -->
@@ -223,7 +235,10 @@
                             placeholder="// ここにテキストを入力してください..."></textarea>
                     </div>
                 </div>
-                <div class="col-divider" id="divider-right"></div>
+                <div class="col-divider" id="divider-right"
+                     role="separator" tabindex="0" aria-orientation="vertical"
+                     aria-label="エディターの幅（左右キーで変更）"
+                     aria-valuemin="0" aria-valuemax="100"></div>
 
                 <!--
                 ========================================
@@ -237,7 +252,7 @@
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h5>プレビュー</h5>
                             <div class="text-end">
-                                <button class="btn btn-primary btn-sm" onclick="printPages()">
+                                <button type="button" class="btn btn-primary btn-sm" onclick="printPages()">
                                     印刷
                                 </button>
                                 <small class="d-block text-muted mt-1" style="white-space: nowrap;">
@@ -254,8 +269,8 @@
         </div>
 
         <!-- format.js（整形エンジン・DOM非依存）→ app.js（UI）の順に読み込む -->
-        <script src="format.js?v=26.8.8"></script>
-        <script src="app.js?v=26.8.8"></script>
+        <script src="format.js?v=26.8.8a"></script>
+        <script src="app.js?v=26.8.8a"></script>
         <script>
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('./sw.js');

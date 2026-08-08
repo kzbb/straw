@@ -1,0 +1,20 @@
+<!--
+  マスカブルアイコン専用。
+  Android などはアイコンを円形・角丸などに切り抜くため、図柄を中央 80%
+  （セーフゾーン）へ収め、外周を背景色で埋めている。
+  切り抜きのない用途には icon.svg を使う。
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#ecf0f1"/>
+  <!-- icon.svg の図柄を 0.8 倍して中央へ寄せる（512 × 0.1 = 51.2 のオフセット） -->
+  <g transform="translate(51.2 51.2) scale(0.8)">
+    <rect x="100" y="272" width="16" height="128" rx="2" fill="#2c3e50"/>
+    <rect x="100" y="216" width="16" height="40" rx="2" fill="#2c3e50"/>
+    <rect x="150" y="272" width="16" height="64" rx="2" fill="#2c3e50"/>
+    <rect x="200" y="272" width="16" height="128" rx="2" fill="#2c3e50"/>
+    <rect x="280" y="80" width="76" height="16" rx="2" fill="#2c3e50"/>
+    <rect x="280" y="80" width="16" height="352" rx="2" fill="#2c3e50"/>
+    <rect x="340" y="80" width="16" height="352" rx="2" fill="#2c3e50"/>
+    <rect x="60" y="192" width="392" height="16" rx="2" fill="#2c3e50"/>
+  </g>
+</svg>
