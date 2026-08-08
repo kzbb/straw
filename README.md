@@ -16,3 +16,45 @@ https://straw.bblab.org/
 
 ## 使い方
 アプリ内の左サイドバーを参照してください。
+
+## 開発
+
+ビルド工程・依存パッケージはありません。`index.html`をブラウザで開けば動きます。
+
+### ファイル構成
+
+| ファイル | 役割 |
+| --- | --- |
+| `format.js` | 台本整形エンジン。DOM非依存の純粋ロジック |
+| `app.js` | UIレイヤー。DOM生成・イベント・ファイル入出力 |
+| `styles.css` | スタイル。紙面ジオメトリは`:root`のCSS変数に集約 |
+| `sw.js` | Service Worker（PWA・オフライン対応） |
+| `customHttp.yml` | Amplifyの配信キャッシュ設定 |
+| `test/` | `format.js`の回帰テスト |
+| `tools/` | 保守用スクリプト |
+
+`index.html`は`format.js`→`app.js`の順に読み込みます（`app.js`が
+`format.js`のグローバル関数に依存しているため、順序を入れ替えると動きません）。
+
+### テスト
+
+Node組み込みのテストランナーを使います（インストール不要）。
+
+```sh
+node --test test/format.test.js
+```
+
+折り返し・禁則処理・柱書の採番・タイトル判定に加えて、
+JSとCSS/HTMLに分かれている数値（1行の文字数、印刷倍率、バージョン文字列）が
+一致しているかも検証します。
+
+### リリース手順
+
+`customHttp.yml`がJS/CSSを1年間immutableでキャッシュさせるため、
+**変更をデプロイする前に必ずバージョンを上げてください。**
+上げ忘れると、利用者には新しい`index.html`と古いJSの組み合わせが届きます。
+
+```sh
+node tools/bump-version.js 26.8.8   # index.htmlの ?v= / ver. と sw.jsのキャッシュ名を一括更新
+node tools/bump-version.js --check  # 全箇所が一致しているか確認
+```

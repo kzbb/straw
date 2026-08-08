@@ -1,4 +1,4 @@
-const CACHE_NAME = 'straw-v3';
+const CACHE_NAME = 'straw-26.8.8';
 
 // install時にプリキャッシュするのはHTMLと最低限のシェルのみ。
 // CSS/JSはクエリ文字列付きURLで要求されるため、動的なnetwork-firstキャッシュに任せる。

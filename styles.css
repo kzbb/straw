@@ -9,6 +9,28 @@
     box-sizing: border-box;
 }
 
+/*
+========================================
+紙面ジオメトリの単一定義
+========================================
+プレビューと印刷で同じ式を使い、値だけを @media print で差し替える。
+--chars-per-line は format.js の MAX_CHARS_PER_LINE と一致させること
+（test/format.test.js の「CSSとJSの1行文字数が一致する」で検証している）。
+*/
+:root {
+    --chars-per-line: 29;      /* 1行の文字数（format.js: MAX_CHARS_PER_LINE） */
+    --scene-zone: 5em;         /* 柱書番号欄が本文領域の上へ張り出す高さ */
+
+    --paper-w: 400px;          /* プレビュー紙面の幅 */
+    --paper-h: 560px;          /* プレビュー紙面の高さ */
+    --paper-pad: 15px;         /* 本文の紙面内側マージン */
+    --header-offset: 151px;    /* 紙面内側から柱書ヘッダー罫線までの距離 */
+
+    /* プレビュー紙面(560px) と 印刷紙面(232mm ≒ 876.8px@96dpi) の倍率。
+       app.js の adjustTitleFontSize() が逆数として参照する。 */
+    --print-scale: 1.566;
+}
+
 /* 基本フォント */
 body {
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -448,8 +470,8 @@ html, body {
 
 /* B5用紙コンテナ */
 .b5-paper {
-    width: 400px;
-    height: 560px;
+    width: var(--paper-w);
+    height: var(--paper-h);
     margin: 0 auto 20px auto;
     background-color: #ffffff;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -495,13 +517,15 @@ html, body {
     writing-mode: vertical-rl;
     text-orientation: upright;
 
-    /* 配置・サイズ */
+    /* 配置・サイズ
+       柱書の枠が本文の上へ --scene-zone ぶん張り出すので、
+       その高さを本文領域の上に足してから padding で押し下げている。 */
     position: absolute;
-    right: 15px;
-    top: calc(15px + 151px - 5em);
-    width: calc(100% - 30px);
-    height: calc(100% - 30px - 151px + 5em);
-    padding-top: 5em;
+    right: var(--paper-pad);
+    top: calc(var(--paper-pad) + var(--header-offset) - var(--scene-zone));
+    width: calc(100% - var(--paper-pad) * 2);
+    height: calc(100% - var(--paper-pad) * 2 - var(--header-offset) + var(--scene-zone));
+    padding-top: var(--scene-zone);
 
     /* 表示設定 */
     overflow: visible;
@@ -559,12 +583,15 @@ html, body {
     display: block;
     margin-bottom: 0;
     position: relative;
-    top: -5em;
+    /* 本文より --scene-zone ぶん上に伸ばし、その空間に柱書番号を置く */
+    top: calc(-1 * var(--scene-zone));
     border: #000 1px solid;
     border-bottom: none;
+    /* この margin と border を変えると1行ぶんの占有幅が変わるため、
+       format.js の SCENE_LINE_WEIGHT も合わせて見直すこと */
     margin-left: 0.5em;
     margin-right: 0.5em;
-    height: calc(29em + 5em);
+    height: calc(var(--chars-per-line) * 1em + var(--scene-zone));
 }
 
 /*
@@ -777,6 +804,16 @@ html, body {
         margin: 25mm 9mm 0mm 9mm;
     }
 
+    /* 紙面ジオメトリを実寸へ差し替える。式は :root と共通なので値だけ変える。
+       B5コンテンツエリア = 182mm - 9mm×2 = 164mm、257mm - 25mm = 232mm。
+       --header-offset は プレビューの 151px/560px を 232mm へ比例換算した値。 */
+    :root {
+        --paper-w: 164mm;
+        --paper-h: 232mm;
+        --paper-pad: 6mm;
+        --header-offset: 63mm;
+    }
+
     /* min-widthを解除：残ったままだとブラウザが縮小印刷する */
     html, body, .container-fluid {
         min-width: 0 !important;
@@ -818,10 +855,8 @@ html, body {
         margin: 0 !important;
     }
 
-    /* B5実寸（コンテンツエリア = 182mm - 9mm×2 = 164mm、257mm - 25mm = 232mm） */
+    /* 幅・高さは :root の変数差し替えで実寸になる */
     .b5-paper {
-        width: 164mm;
-        height: 232mm;
         page-break-after: always;
         break-after: page;
         margin: 0;
@@ -839,22 +874,16 @@ html, body {
         border: none;
     }
 
-    /* 印刷紙面(232mm)÷プレビュー紙面(560px@96dpi≒148mm)≒1.566倍でプレビューと同比率に */
-    /* インラインstyleより優先させるため!importantが必要 */
+    /* プレビューで決めた font-size を印刷倍率で拡大する。
+       インラインstyleより優先させるため !important が必要。 */
     .title-cover-text {
-        font-size: calc(var(--title-font-px) * 1.566px) !important;
+        font-size: calc(var(--title-font-px) * var(--print-scale) * 1px) !important;
     }
 
-    /* プレビュー400×560pxからB5実寸へ比例換算。
-       font-size: 164mm÷(17列×line-height1.8) ≒ 14pt
-       top: (15+151)/560×232mm - 5em ≒ calc(69mm - 5em)
-       height: 100% - (30+151)/560×232mm + 5em ≒ calc(100% - 75mm + 5em) */
+    /* 位置・サイズの式は :root と共通。
+       font-size だけは実寸から算出：164mm ÷ (17列 × line-height 1.8) ≒ 14pt */
     .vertical-text {
         font-size: 14pt;
-        right: 6mm;
-        top: calc(69mm - 5em);
-        width: calc(100% - 12mm);
-        height: calc(100% - 75mm + 5em);
     }
 
     .page-number {

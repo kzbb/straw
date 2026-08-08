@@ -2,15 +2,12 @@
 
 /*
 ========================================
-アプリケーションコア：テキスト処理エンジン
+UI レイヤー
 ========================================
+テキスト整形そのものは format.js（DOM 非依存）にある。
+このファイルは DOM 生成・イベント処理・ファイル入出力を担当する。
+index.html では format.js → app.js の順に読み込むこと。
 */
-
-// 柱書検出パターン（複数箇所で共通使用）
-const MANUAL_SCENE_REGEX = /^【([^】]+)】[◯○◎◇□＊☆]/;
-const AUTO_SCENE_REGEX = /^[◯○◎◇□＊☆]/;
-const MANUAL_SCENE_REPLACE_REGEX = /^\s*【[^】]+】[◯○◎◇□＊☆]\s*/;
-const AUTO_SCENE_REPLACE_REGEX = /^\s*[◯○◎◇□＊☆]\s*/;
 
 // 連続呼び出しを間引くユーティリティ
 function debounce(fn, delay) {
@@ -25,285 +22,7 @@ const PREVIEW_UPDATE_DEBOUNCE_MS = 150;
 const PREVIEW_UPDATE_SYNC_THRESHOLD_MS = 16;
 let lastPreviewUpdateDuration = 0;
 
-/**
- * 縦書きB5ページ分割メイン関数
- * 
- * 【機能概要】
- * 入力テキストを台本用B5縦書きレイアウトに変換
- * - B5用紙サイズ：1ページ17行、1行29文字
- * - 日本語禁則処理：句読点・括弧の適切な改行制御
- * - 柱書処理：自動番号振り（◯○◎◇□＊☆ → 数字）
- * - セリフ行処理：カギカッコ行の自動インデント
- * 
- * @param {string} text - 入力テキスト（改行区切り）
- * @returns {Array<Array<Object>>} ページ配列（各ページは行オブジェクトの配列）
- *   行オブジェクト形式：{ text: string, isScene: boolean }
- */
-function formatVerticalTextToPages(text) {
-    // 
-    // ========== B5縦書きレイアウト制約 ==========
-    // 
-    const maxLines = 17;                    // 1ページ最大行数
-    const maxCharsPerLine = 29;             // 1行最大文字数
-    const lines = text.split('\n');         // 入力を行単位に分割
-    let allFormattedLines = [];             // 整形後全行格納配列
-    let sceneNumber = 1;                    // 柱書連番カウンタ
-
-    // 
-    // ========== 日本語禁則処理設定 ==========
-    // 
-    const startChars = '。、？！」』）〕］｝〉》】〗〙〛ー：；・ぁぃぅぇぉっゃゅょゎゐゑァィゥェォッャュョヮヵヶ'; // 行頭禁止文字
-    const endChars = '「『（〔［｛〈《【〖〘〚';                // 行末禁止文字
-    /**
-     * 禁則処理判定関数
-     * 
-     * 【判定ロジック】
-     * 1. 行末禁止文字（開き括弧等）の後では改行不可
-     * 2. 行頭禁止文字（句読点等）の前では改行不可
-     * 
-     * @param {string} char - 現在文字
-     * @param {string} nextChar - 次文字
-     * @returns {boolean} 改行可能フラグ
-     */
-    function canBreakAfter(char, nextChar) {
-        if (endChars.includes(char)) return false; // 行末禁止文字チェック
-        if (nextChar && startChars.includes(nextChar)) return false; // 行頭禁止文字チェック
-        return true; // その他は改行可能
-    }
-
-    /**
-     * 最適改行位置探索関数
-     * 
-     * 【探索アルゴリズム】
-     * 1. 最大文字数から逆方向に探索
-     * 2. 禁則処理に適合する位置を優先
-     * 3. 最大5文字手前まで探索
-     * 4. 見つからない場合は強制切断
-     * 
-     * @param {string} text - 対象テキスト
-     * @param {number} maxLength - 最大文字数
-     * @returns {number} 最適改行位置インデックス
-     */
-    function findBreakPoint(text, maxLength) {
-        if (text.length <= maxLength) return text.length; // 制限内ならそのまま
-
-        // 逆方向探索：最大5文字手前まで
-        for (let i = maxLength; i > Math.max(1, maxLength - 5); i--) {
-            if (i >= text.length) continue; // 範囲外スキップ
-
-            const char = text[i - 1]; // 改行直前文字
-            const nextChar = text[i]; // 改行直後文字
-
-            if (canBreakAfter(char, nextChar)) {
-                return i; // 適切な位置発見
-            }
-        }
-
-        return maxLength; // 強制切断
-    }
-
-    //
-    // ========== 柱書折り返しヘルパー ==========
-    // 手動・自動柱書の共通折り返し処理
-    //
-    /**
-     * @param {string} sceneText
-     * @param {number} lineIdx
-     */
-    function pushSceneLines(sceneText, lineIdx) {
-        const indentMatch = sceneText.match(/^(\s*)/);
-        const baseIndent = indentMatch ? indentMatch[1] : '';
-
-        if (sceneText.length <= maxCharsPerLine) {
-            allFormattedLines.push({ text: sceneText, isScene: true, originalLineIndex: lineIdx });
-        } else {
-            const firstLineBreak = findBreakPoint(sceneText, maxCharsPerLine);
-            allFormattedLines.push({ text: sceneText.substring(0, firstLineBreak), isScene: true, originalLineIndex: lineIdx });
-
-            let remainingText = sceneText.substring(firstLineBreak);
-            while (remainingText.length > 0) {
-                const availableSpace = maxCharsPerLine - baseIndent.length;
-                if (availableSpace <= 0) {
-                    const breakPoint = findBreakPoint(remainingText, maxCharsPerLine);
-                    allFormattedLines.push({ text: remainingText.substring(0, breakPoint), isScene: true });
-                    remainingText = remainingText.substring(breakPoint);
-                } else if (remainingText.length <= availableSpace) {
-                    allFormattedLines.push({ text: baseIndent + remainingText, isScene: true });
-                    break;
-                } else {
-                    const breakPoint = findBreakPoint(remainingText, availableSpace);
-                    allFormattedLines.push({ text: baseIndent + remainingText.substring(0, breakPoint), isScene: true });
-                    remainingText = remainingText.substring(breakPoint);
-                }
-            }
-        }
-    }
-
-    //
-    // ========== 各行処理メインループ ==========
-    //
-    for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
-        const line = lines[lineIdx];
-        // 空行処理：そのまま追加
-        if (line.length === 0) {
-            allFormattedLines.push({ text: '', isScene: false, originalLineIndex: lineIdx });
-            continue;
-        }
-
-        // 
-        // ========== 柱書処理 ==========
-
-        // パターン1：手動指定 - 【】で囲まれた文字列 + 記号
-        // パターン2：自動連番 - 行頭の ◯○◎◇□＊☆ を番号に変換
-        // 
-
-        // 手動指定パターンの検出（【文字列】 + 記号）
-        const manualSceneMatch = line.trim().match(MANUAL_SCENE_REGEX);
-
-        if (manualSceneMatch) {
-            // 手動指定の柱書処理
-            const manualSceneText = manualSceneMatch[1]; // 【】内の文字列
-
-            // 文字数を5文字に揃える：4文字以下なら右揃え＋空白、5文字以上なら切り詰め
-            let formattedSceneText;
-            if (manualSceneText.length <= 4) {
-                // 4文字以下：右揃えで空白埋め（例：「1A」→「   1A 」）
-                formattedSceneText = manualSceneText.padStart(4, ' ') + ' ';
-            } else {
-                // 5文字以上：5文字で切り詰め（例：「シーン1回想場面」→「シーン1回想場」）
-                formattedSceneText = manualSceneText.substring(0, 5);
-            }
-
-            const sceneText = line.replace(/^(\s*)【[^】]+】[◯○◎◇□＊☆]/, `$1${formattedSceneText}`);
-            pushSceneLines(sceneText, lineIdx);
-            continue;
-        }
-
-        // 自動連番パターンの検出（記号のみ）
-        if (line.trim().match(AUTO_SCENE_REGEX)) {
-            // 番号変換：記号 → "   1 "形式（4桁+空白）
-            const sceneNumber4Digits = String(sceneNumber).padStart(4, ' ') + ' ';
-            const sceneText = line.replace(/^\s*[◯○◎◇□＊☆]/, sceneNumber4Digits);
-            sceneNumber++; // 連番インクリメント
-            pushSceneLines(sceneText, lineIdx);
-            continue;
-        }
-
-        // 
-        // ========== 通常行処理 ==========
-        // 
-
-        // インデント検出
-        const indentMatch = line.match(/^(\s*)/);
-        const baseIndent = indentMatch ? indentMatch[1] : '';
-
-        // セリフ行判定：元行全体でカギカッコ終了チェック
-        const originalLineEndsWithQuote = line.trim().endsWith('」') || line.trim().endsWith('』');
-
-        if (line.length <= maxCharsPerLine) {
-            // 1行以内：そのまま追加
-            allFormattedLines.push({ text: line, isScene: false, originalLineIndex: lineIdx, isDialogueLine: originalLineEndsWithQuote });
-        } else {
-            //
-            // ========== 29文字超過：自動折り返し処理 ==========
-            //
-
-            // 第1行の改行位置決定
-            const firstLineBreak = findBreakPoint(line, maxCharsPerLine);
-            const firstLine = line.substring(0, firstLineBreak);
-            allFormattedLines.push({ text: firstLine, isScene: false, originalLineIndex: lineIdx, isDialogueLine: originalLineEndsWithQuote });
-
-            // 残りテキスト処理
-            let remainingText = line.substring(firstLineBreak);
-
-            while (remainingText.length > 0) {
-                // 
-                // ========== 2行目以降のインデント決定 ==========
-                // 
-                let currentIndent;
-                if (originalLineEndsWithQuote) {
-                    // セリフ行：4文字インデント
-                    currentIndent = '　　　　'; // 全角スペース4文字
-                } else {
-                    // 通常行：元インデント継続
-                    currentIndent = baseIndent;
-                }
-
-                // 利用可能文字数計算
-                const availableSpace = maxCharsPerLine - currentIndent.length;
-
-                if (availableSpace <= 0) {
-                    // インデント過大：強制切断
-                    const breakPoint = findBreakPoint(remainingText, maxCharsPerLine);
-                    allFormattedLines.push({ text: remainingText.substring(0, breakPoint), isScene: false, originalLineIndex: lineIdx });
-                    remainingText = remainingText.substring(breakPoint);
-                } else if (remainingText.length <= availableSpace) {
-                    // 残り全部収まる：完了
-                    allFormattedLines.push({ text: currentIndent + remainingText, isScene: false, originalLineIndex: lineIdx });
-                    break;
-                } else {
-                    // 分割継続
-                    const breakPoint = findBreakPoint(remainingText, availableSpace);
-                    allFormattedLines.push({ text: currentIndent + remainingText.substring(0, breakPoint), isScene: false, originalLineIndex: lineIdx });
-                    remainingText = remainingText.substring(breakPoint);
-                }
-            }
-        }
-    }
-
-    // 
-    // ========== ページ分割処理 ==========
-    // 17行制限によるページ分割（柱書は1.8行相当）
-    // 
-    const pages = [];
-    let currentPage = [];
-    let currentLineCount = 0;
-
-    for (let lineObj of allFormattedLines) {
-        // 行重み計算：柱書1.8行、通常行1行
-        const lineWeight = lineObj.isScene ? 1.8 : 1;
-
-        // ページ容量チェック：17行超過判定
-        if (currentLineCount + lineWeight > maxLines && currentPage.length > 0) {
-            // 現ページを17行で埋めて確定
-            while (Math.ceil(currentLineCount) < maxLines) {
-                currentPage.push({ text: '', isScene: false });
-                currentLineCount += 1;
-            }
-
-            pages.push(currentPage); // ページ確定
-            currentPage = []; // 新ページ開始
-            currentLineCount = 0;
-        }
-
-        // 行追加
-        currentPage.push(lineObj);
-        currentLineCount += lineWeight;
-    }
-
-    // 最終ページ処理
-    if (currentPage.length > 0) {
-        // 17行まで空行で埋める
-        while (Math.ceil(currentLineCount) < maxLines) {
-            currentPage.push({ text: '', isScene: false });
-            currentLineCount += 1;
-        }
-        pages.push(currentPage);
-    }
-
-    // 空テキスト用最低1ページ保証
-    if (pages.length === 0) {
-        const emptyPage = [];
-        for (let i = 0; i < maxLines; i++) {
-            emptyPage.push({ text: '', isScene: false });
-        }
-        pages.push(emptyPage);
-    }
-
-    return pages;
-}
-
-/* 
+/*
 ========================================
 UI更新システム：プレビュー表示
 ========================================
@@ -331,54 +50,21 @@ function appendDialoguePrefixWithFixedSpaces(target, prefixText) {
 }
 
 /**
- * セリフ行の「前」部分を、プレビュー上で最小3文字幅に整える。
- * 元テキストは変更せず、表示時にのみ不足分の全角スペースを補う。
- *
- * 例:
- * - "あいう" -> "あいう"（そのまま）
- * - "かき"   -> "か　き"
- * - "さ"     -> "　さ　"
- *
- * @param {string} prefixText
- * @returns {string}
- */
-function normalizeDialoguePrefixForPreview(prefixText) {
-    const chars = Array.from(prefixText);
-    if (chars.length >= 3) return prefixText;
-
-    if (chars.length === 2) {
-        return `${chars[0]}　${chars[1]}`;
-    }
-
-    if (chars.length === 1) {
-        return `　${chars[0]}　`;
-    }
-
-    return '　　　';
-}
-
-/**
- * 縦書きプレビュー更新関数
- * 
- * 【処理フロー】
- * 1. エディタテキスト取得
- * 2. ページ形式変換
- * 3. 既存プレビュークリア
- * 4. 新プレビュー生成・表示
- *
- * リアルタイム更新：inputイベントで自動実行
- */
-
-/**
  * @param {HTMLElement} titleText
  */
 function adjustTitleFontSize(titleText) {
     const container = titleText.parentElement;
     if (!container) return;
-    // プレビュー紙面(560px)と印刷紙面(232mm = 876.8px@96dpi)の比率で縮小
-    const PRINT_SCALE = 560 / (232 * 96 / 25.4); // ≈ 0.639
-    const maxH = container.clientHeight * PRINT_SCALE;
-    const maxW = container.clientWidth * PRINT_SCALE;
+
+    // 印刷倍率は styles.css の --print-scale が単一の定義。
+    // プレビューではその逆数ぶん小さく収めておけば、印刷時に紙面いっぱいになる。
+    const printScale = parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue('--print-scale')
+    ) || 1.566;
+    const previewScale = 1 / printScale;
+
+    const maxH = container.clientHeight * previewScale;
+    const maxW = container.clientWidth * previewScale;
 
     let lo = 10, hi = 120;
     titleText.style.fontSize = hi + 'px';
@@ -464,11 +150,10 @@ function createPageElement(pageLines, index) {
             const quoteStartIndex = lineText.search(/[「『]/);
 
             if (lineObj.isDialogueLine && quoteStartIndex > 0) {
-                const prefixText = lineText.slice(0, quoteStartIndex);
-                const alignedPrefixText = normalizeDialoguePrefixForPreview(prefixText);
-                const quoteAndAfter = lineText.slice(quoteStartIndex);
-                appendDialoguePrefixWithFixedSpaces(lineSpan, alignedPrefixText);
-                lineSpan.appendChild(document.createTextNode(quoteAndAfter));
+                // 発言者名の幅揃えは format.js 側で済んでいる（折り返し幅の
+                // 計算に反映させる必要があるため）。ここでは空白の固定幅化だけ行う。
+                appendDialoguePrefixWithFixedSpaces(lineSpan, lineText.slice(0, quoteStartIndex));
+                lineSpan.appendChild(document.createTextNode(lineText.slice(quoteStartIndex)));
             } else {
                 lineSpan.textContent = lineText;
             }
@@ -498,6 +183,17 @@ function createPageElement(pageLines, index) {
     return pageDiv;
 }
 
+/**
+ * 縦書きプレビュー更新関数
+ *
+ * 【処理フロー】
+ * 1. エディタテキスト取得
+ * 2. ページ形式変換
+ * 3. 既存プレビュークリア
+ * 4. 新プレビュー生成・表示
+ *
+ * リアルタイム更新：inputイベントで自動実行
+ */
 function updateVerticalDisplay() {
     const startTime = performance.now();
     const editor = document.getElementById('editor');
@@ -574,6 +270,7 @@ async function saveText(forceNewFile = false) {
                 const writable = await currentFileHandle.createWritable();
                 await writable.write(contentToSave);
                 await writable.close();
+                markAsSavedToFile();
                 showNotification(`「${currentFileName}」を上書き保存しました。`, 'success');
                 return;
             }
@@ -595,6 +292,7 @@ async function saveText(forceNewFile = false) {
             currentFileHandle = fileHandle;
             currentFileName = fileHandle.name;
 
+            markAsSavedToFile();
             showNotification(`「${currentFileName}」を保存しました。`, 'success');
             return;
         } catch (error) {
@@ -618,6 +316,7 @@ async function saveText(forceNewFile = false) {
     // メモリ解放
     URL.revokeObjectURL(link.href);
 
+    markAsSavedToFile();
     showNotification(`ファイル「${filename}」がダウンロードフォルダに保存されました。`, 'success');
 }
 
@@ -689,6 +388,8 @@ function showNotification(message, type = 'success') {
 const debouncedUpdateVerticalDisplay = debounce(updateVerticalDisplay, PREVIEW_UPDATE_DEBOUNCE_MS);
 
 function handleEditorInput() {
+    debouncedWriteDraft();
+
     if (lastPreviewUpdateDuration >= PREVIEW_UPDATE_SYNC_THRESHOLD_MS) {
         debouncedUpdateVerticalDisplay();
         return;
@@ -703,12 +404,13 @@ document.getElementById('editor').addEventListener('input', handleEditorInput);
 document.querySelector('.titleInput').addEventListener('input', () => {
     const workTitle = document.querySelector('.titleInput').value.trim();
     document.title = workTitle || DEFAULT_TITLE;
+    debouncedWriteDraft();
     updateVerticalDisplay();
 });
 
 /**
  * 印刷実行関数
- * 
+ *
  * ブラウザ印刷ダイアログ起動
  * CSS @media printによりプレビュー部分のみ印刷
  */
@@ -716,9 +418,136 @@ function printPages() {
     window.print();
 }
 
+/*
+========================================
+下書きの自動保存と未保存警告
+========================================
+ブラウザ上で長文を書くツールなので、タブを閉じただけで内容が消えないようにする。
+- localStorage への下書き保存：入力のたびに上書きし、次回起動時に自動復元する
+- beforeunload での警告：ファイルへ書き出していない変更がある場合のみ出す
+
+「保存済み」の基準はあくまでファイルへの書き出し。下書きが残っていても
+ユーザーの認識では未保存なので、両者は別に扱う。
+*/
+
+const DRAFT_STORAGE_KEY = 'straw.draft.v1';
+const DRAFT_SAVE_DEBOUNCE_MS = 800;
+
+/**
+ * 未保存判定・下書き保存に共通で使うスナップショット表現
+ * @param {string} title
+ * @param {string} body
+ * @returns {string}
+ */
+function snapshotOf(title, body) {
+    return JSON.stringify({ title, body });
+}
+
+/** @returns {string} 現在の編集内容のスナップショット */
+function currentSnapshot() {
+    const titleInput = /** @type {HTMLInputElement | null} */ (document.querySelector('.titleInput'));
+    const editor = /** @type {HTMLTextAreaElement | null} */ (document.getElementById('editor'));
+    return snapshotOf(titleInput?.value ?? '', editor?.value ?? '');
+}
+
+// 最後にファイルへ書き出した時点の内容。初期値は「空の状態」。
+let lastSavedSnapshot = snapshotOf('', '');
+
+function hasUnsavedChanges() {
+    return currentSnapshot() !== lastSavedSnapshot;
+}
+
+/** ファイルへの保存・読み込み直後に呼び、その時点を「保存済み」の基準にする */
+function markAsSavedToFile() {
+    lastSavedSnapshot = currentSnapshot();
+    writeDraft();
+}
+
+/**
+ * 下書きを localStorage へ書く。
+ * 未保存フラグも一緒に持たせることで、リロードを挟んでも警告の状態を保てる。
+ * 下書きは補助機能なので、書き込みに失敗しても操作は止めない。
+ */
+function writeDraft() {
+    const titleInput = /** @type {HTMLInputElement | null} */ (document.querySelector('.titleInput'));
+    const editor = /** @type {HTMLTextAreaElement | null} */ (document.getElementById('editor'));
+
+    try {
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
+            title: titleInput?.value ?? '',
+            body: editor?.value ?? '',
+            savedSnapshot: lastSavedSnapshot
+        }));
+    } catch (error) {
+        // 容量超過・プライベートモード・ストレージ無効など
+        console.warn('下書きの保存に失敗しました:', error);
+    }
+}
+
+const debouncedWriteDraft = debounce(writeDraft, DRAFT_SAVE_DEBOUNCE_MS);
+
+/**
+ * 起動時に下書きを復元する。
+ * 下書きは入力のたびに上書きしているため、常に前回終了時点の内容と一致する。
+ *
+ * @returns {boolean} 復元したか
+ */
+function restoreDraft() {
+    let draft;
+    try {
+        const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (!raw) return false;
+        draft = JSON.parse(raw);
+    } catch (error) {
+        return false; // ストレージが使えない、または壊れた下書き
+    }
+
+    if (!draft || (!draft.title && !draft.body)) return false;
+
+    const titleInput = /** @type {HTMLInputElement} */ (document.querySelector('.titleInput'));
+    const editor = /** @type {HTMLTextAreaElement} */ (document.getElementById('editor'));
+
+    titleInput.value = draft.title ?? '';
+    editor.value = draft.body ?? '';
+    document.title = draft.title || DEFAULT_TITLE;
+    lastSavedSnapshot = draft.savedSnapshot ?? snapshotOf('', '');
+
+    return true;
+}
+
+/**
+ * 読み込んだテキストをエディタへ反映する共通処理。
+ * loadText（File System Access API）と handleFileSelect（従来方式）の両方から使う。
+ *
+ * @param {string} rawContent - ファイルの生テキスト
+ * @param {string} fileName - 表示・保存に使うファイル名
+ * @param {FileSystemFileHandle | null} fileHandle - 上書き保存用ハンドル（従来方式では null）
+ */
+function applyLoadedContent(rawContent, fileName, fileHandle) {
+    const content = normalizeNewlines(rawContent);
+    const { title, body } = splitTitleAndBody(content);
+
+    document.querySelector('.titleInput').value = title;
+    document.getElementById('editor').value = body;
+    document.title = title || DEFAULT_TITLE;
+
+    updateVerticalDisplay();
+
+    // 上書き保存用の状態を更新（従来方式はハンドルを取得できないので null）
+    currentFileHandle = fileHandle;
+    currentFileName = fileName;
+
+    // 読み込み直後はファイルと一致しているので「保存済み」の基準にする
+    markAsSavedToFile();
+
+    if (buildSceneList()) switchLeftTab('outline');
+
+    showNotification(`ファイル「${fileName}」を読み込みました。`, 'success');
+}
+
 /**
  * ファイル読み込みトリガー関数
- * 
+ *
  * File System Access API対応ブラウザでは直接ファイルを開き、
  * その他のブラウザでは隠しファイル入力要素を使用
  */
@@ -734,34 +563,7 @@ async function loadText() {
             });
 
             const file = await fileHandle.getFile();
-            const content = await file.text();
-
-            // タイトル行と本文を分離（2行目が空行の場合のみタイトルと認識）
-            const lines = content.split('\n');
-            const firstLine = lines[0];
-            const secondLine = lines[1];
-            const isTitle = firstLine && secondLine === '' && !firstLine.startsWith(' ') && !firstLine.match(/^[\s\S]*[\[\]◯○◎◇□＊☆]/);
-
-            const titleInput = document.querySelector('.titleInput');
-            const editor = document.getElementById('editor');
-
-            if (isTitle) {
-                titleInput.value = firstLine;
-                editor.value = lines.slice(2).join('\n');
-            } else {
-                titleInput.value = '';
-                editor.value = content;
-            }
-
-            updateVerticalDisplay();
-
-            // ファイルハンドルを保存（上書き保存用）
-            currentFileHandle = fileHandle;
-            currentFileName = fileHandle.name;
-
-            if (buildSceneList()) switchLeftTab('outline');
-
-            showNotification(`ファイル「${fileHandle.name}」を読み込みました。`, 'success');
+            applyLoadedContent(await file.text(), fileHandle.name, fileHandle);
         } catch (error) {
             if (error.name === 'AbortError') return; // ユーザーキャンセル
             console.error('ファイル読み込みエラー:', error);
@@ -806,34 +608,8 @@ function handleFileSelect(event) {
     // 読み込み成功処理
     reader.onload = function(e) {
         try {
-            const content = e.target.result;
-
-            // タイトル行と本文を分離（2行目が空行の場合のみタイトルと認識）
-            const lines = content.split('\n');
-            const firstLine = lines[0];
-            const secondLine = lines[1];
-            const isTitle = firstLine && secondLine === '' && !firstLine.startsWith(' ') && !firstLine.match(/^[\s\S]*[\[\]◯○◎◇□＊☆]/);
-
-            const titleInput = document.querySelector('.titleInput');
-            const editor = document.getElementById('editor');
-
-            if (isTitle) {
-                titleInput.value = firstLine;
-                editor.value = lines.slice(2).join('\n');
-            } else {
-                titleInput.value = '';
-                editor.value = content;
-            }
-
-            updateVerticalDisplay();
-
-            // 従来方式ではファイルハンドルは取得できないため、リセット
-            currentFileHandle = null;
-            currentFileName = file.name;
-
-            if (buildSceneList()) switchLeftTab('outline');
-
-            showNotification(`ファイル「${file.name}」を読み込みました。`, 'success');
+            // 従来方式ではファイルハンドルを取得できないため上書き保存は不可
+            applyLoadedContent(String(e.target.result), file.name, null);
         } catch (error) {
             console.error('ファイル読み込みエラー:', error);
             showNotification('ファイルの読み込み中にエラーが発生しました。', 'error');
@@ -858,8 +634,33 @@ function handleFileSelect(event) {
 ========================================
 */
 
-// 初期プレビュー表示実行
+// 前回の下書きがあれば復元してから初期プレビューを表示する
+const draftRestored = restoreDraft();
+
 updateVerticalDisplay();
+
+if (draftRestored) {
+    if (buildSceneList()) switchLeftTab('outline');
+    showNotification('前回の続きを復元しました。', 'success');
+}
+
+// 未保存の変更があるまま離脱しようとしたら確認する
+// （文言はブラウザ側が決めるため、こちらからは指定できない）
+window.addEventListener('beforeunload', (event) => {
+    if (!hasUnsavedChanges()) return;
+    event.preventDefault();
+    // preventDefault() だけで足りるのは比較的新しいブラウザのみ。
+    // 古い Safari / Firefox 向けに非推奨の returnValue も併用する。
+    event.returnValue = '';
+});
+
+// 離脱・バックグラウンド化の直前に下書きを確定させる
+// （debounce 待ちのぶんを取りこぼさないため。モバイルではタブが
+//   そのまま破棄されることがあるので visibilitychange も拾う）
+window.addEventListener('pagehide', writeDraft);
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') writeDraft();
+});
 
 // 柱書リストのクリックを委譲（リスト再構築ごとにリスナーを作り直さない）
 document.getElementById('scene-list').addEventListener('click', (e) => {
@@ -939,10 +740,10 @@ function buildSceneList() {
         let label, rest;
         if (manualMatch) {
             label = manualMatch[1];
-            rest = line.replace(MANUAL_SCENE_REPLACE_REGEX, '').trim();
+            rest = line.replace(MANUAL_SCENE_STRIP_REGEX, '').trim();
         } else {
             label = String(sceneCounter++);
-            rest = line.replace(AUTO_SCENE_REPLACE_REGEX, '').trim();
+            rest = line.replace(AUTO_SCENE_STRIP_REGEX, '').trim();
         }
 
         const item = document.createElement('div');

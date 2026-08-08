@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>縦書き台本整形ツール</title>
         
-        <link rel="stylesheet" href="styles.css?v=26.6.26">
+        <link rel="stylesheet" href="styles.css?v=26.8.8">
         <link rel="manifest" href="manifest.json">
         <meta name="theme-color" content="#2c3e50">
         <link rel="apple-touch-icon" href="icon.svg">
@@ -108,6 +108,16 @@
                             </small>
                         </div>
 
+                        <!-- 自動下書き保存の説明 -->
+                        <div class="mb-4">
+                            <h6 class="text-primary">自動下書き保存</h6>
+                            <small class="text-muted">
+                                入力内容はブラウザ内に自動保存され、次に開いたときに自動で復元されます。<br>
+                                ファイルに保存していない変更があるままタブを閉じようとすると、確認が表示されます。<br>
+                                <em>※下書きはこのブラウザ内にのみ残ります。完成した原稿はファイルに保存してください。</em>
+                            </small>
+                        </div>
+
                         <!-- プレビューとの連動 -->
                         <div class="mb-4">
                             <h6 class="text-primary">プレビューとの連動</h6>
@@ -129,7 +139,7 @@
                             <a href="https://bblab.org/straw/" target="_blank" class="text-decoration-none text-primary">
                                 <small class="text-muted">
                                     <strong>縦書き台本整形ツール<br></strong>
-                                            ver.26.6.26
+                                            ver.26.8.8
                                 </small>
                             </a>
                         </div>
@@ -243,7 +253,9 @@
             <div class="panel-backdrop" onclick="hideSidePanels()"></div>
         </div>
 
-        <script src="app.js?v=26.6.26"></script>
+        <!-- format.js（整形エンジン・DOM非依存）→ app.js（UI）の順に読み込む -->
+        <script src="format.js?v=26.8.8"></script>
+        <script src="app.js?v=26.8.8"></script>
         <script>
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('./sw.js');
