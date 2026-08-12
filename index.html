@@ -7,7 +7,7 @@
         
         <meta name="description" content="ブラウザ上で動作する縦書き台本整形ツール。柱書・ト書き・セリフ行を自動認識し、B5サイズの縦書き原稿としてプレビュー・印刷できます。">
 
-        <link rel="stylesheet" href="styles.css?v=26.8.8a">
+        <link rel="stylesheet" href="styles.css?v=26.8.11">
         <link rel="manifest" href="manifest.json">
         <meta name="theme-color" content="#2c3e50">
         <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -115,6 +115,16 @@
                             </small>
                         </div>
 
+                        <!-- 共有の説明 -->
+                        <div class="mb-4">
+                            <h6 class="text-primary">共有</h6>
+                            <small class="text-muted">
+                                台本のテキストファイル（.txt）をクラウドストレージに置き、その共有リンクを「共有」ボタンに貼り付けると、相手がこのツールで開けるURLができます。<br>
+                                <strong>元のファイルを差し替えれば、配ったURLはそのままで最新の稿が読まれます。</strong><br>
+                                <em>※ファイルは「リンクを知っている全員」が閲覧できる状態にしてください。</em>
+                            </small>
+                        </div>
+
                         <!-- 自動下書き保存の説明 -->
                         <div class="mb-4">
                             <h6 class="text-primary">自動下書き保存</h6>
@@ -147,7 +157,7 @@
                             <a href="https://bblab.org/straw/" target="_blank" class="text-decoration-none text-primary">
                                 <small class="text-muted">
                                     <strong>縦書き台本整形ツール<br></strong>
-                                            ver.26.8.8a
+                                            ver.26.8.11
                                 </small>
                             </a>
                         </div>
@@ -215,8 +225,11 @@
                                 <button type="button" class="btn btn-success btn-sm me-1" onclick="saveText()">
                                     保存
                                 </button>
-                                <button type="button" class="btn btn-outline-success btn-sm" onclick="saveAsText()">
+                                <button type="button" class="btn btn-outline-success btn-sm me-2" onclick="saveAsText()">
                                     名前を付けて保存
+                                </button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="openShareDialog()">
+                                    共有
                                 </button>
                                 <!-- 隠しファイル入力要素（プログラムからトリガー） -->
                                 <input type="file" id="fileInput" accept=".txt" style="display: none;" onchange="handleFileSelect(event)">
@@ -268,9 +281,62 @@
             <div class="panel-backdrop" onclick="hideSidePanels()"></div>
         </div>
 
-        <!-- format.js（整形エンジン・DOM非依存）→ app.js（UI）の順に読み込む -->
-        <script src="format.js?v=26.8.8a"></script>
-        <script src="app.js?v=26.8.8a"></script>
+        <!--
+        ========================================
+        共有ダイアログ
+        ========================================
+        台本そのものは預からず、置き場所のURLを指す共有URLを作る。
+        -->
+        <dialog id="share-dialog" class="share-dialog" aria-labelledby="share-dialog-title">
+            <h5 id="share-dialog-title">共有</h5>
+
+            <p class="share-lead">
+                台本のテキストファイル（.txt）をクラウドストレージに置き、その共有リンクを貼り付けてください。
+                できたURLを渡すと、相手はこのツールで台本を開けます。
+            </p>
+
+            <label class="share-label" for="share-source-input">台本ファイル（.txt）の共有リンク</label>
+            <input type="url" id="share-source-input" class="share-input"
+                   placeholder="https://..." aria-describedby="share-providers">
+            <small id="share-providers" class="text-muted d-block"></small>
+
+            <div class="share-actions">
+                <button type="button" class="btn btn-primary btn-sm" onclick="buildShareUrlFromInput()">
+                    共有URLを作る
+                </button>
+            </div>
+
+            <div id="share-result" hidden>
+                <label class="share-label" for="share-output">共有URL</label>
+                <textarea id="share-output" class="share-output" rows="3" readonly></textarea>
+                <div class="share-actions">
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="copyShareUrl()">
+                        コピー
+                    </button>
+                </div>
+            </div>
+
+            <p id="share-status" class="share-status" role="status"></p>
+
+            <p class="share-note text-muted">
+                <small>
+                    元のファイルを差し替えれば、配ったURLはそのままで最新の稿が読まれます。<br>
+                    ファイルは「リンクを知っている全員」が閲覧できる状態にしてください。<br>
+                    受け取った人が保存すると、その人の手元の新しいファイルになります。元のファイルは書き換わりません。
+                </small>
+            </p>
+
+            <div class="share-actions share-actions-end">
+                <button type="button" class="btn btn-sm share-close" onclick="closeShareDialog()">
+                    閉じる
+                </button>
+            </div>
+        </dialog>
+
+        <!-- format.js（整形エンジン）→ share.js（共有URL解釈）→ app.js（UI）の順に読み込む -->
+        <script src="format.js?v=26.8.11"></script>
+        <script src="share.js?v=26.8.11"></script>
+        <script src="app.js?v=26.8.11"></script>
         <script>
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('./sw.js');

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'straw-26.8.8a';
+const CACHE_NAME = 'straw-26.8.11';
 
 // install時にプリキャッシュするのはHTMLと最低限のシェルのみ。
 // CSS/JSはクエリ文字列付きURLで要求されるため、動的なnetwork-firstキャッシュに任せる。
@@ -26,6 +26,10 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  // 共有リンクで取りに行く他所の台本ファイルは、アプリのキャッシュへ入れない。
+  // オフライン復帰用のシェルとは性質が違ううえ、他人のファイルが端末に残り続ける。
+  if (new URL(event.request.url).origin !== self.location.origin) return;
 
   event.respondWith(
     fetch(event.request)

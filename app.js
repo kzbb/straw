@@ -449,12 +449,13 @@ function getNotificationArea() {
  * 【アニメーション】
  * - 表示：右からスライドイン
  * - 非表示：右にスライドアウト
- * - 自動消去：3秒後
+ * - 自動消去：3秒後（persistent 指定時は消さない）
  *
  * @param {string} message - 表示メッセージ
  * @param {string} type - 通知種類（success/warning/error）
+ * @param {{ persistent?: boolean }} [options] - persistent: 自動で消さず、クリックで閉じる
  */
-function showNotification(message, type = 'success') {
+function showNotification(message, type = 'success', options = {}) {
     const area = getNotificationArea();
 
     // 通知要素作成
@@ -476,6 +477,23 @@ function showNotification(message, type = 'success') {
     setTimeout(() => {
         notification.classList.add('show');
     }, 100);
+
+    // 読まないと次にどうすればよいか決められない知らせ（共有リンクの失敗など）は
+    // 3秒では読み切れないので、自分で閉じるまで残す。
+    if (options.persistent) {
+        notification.classList.add('notification-persistent');
+        notification.setAttribute('role', 'button');
+        notification.tabIndex = 0;
+        notification.title = 'クリックで閉じる';
+        notification.addEventListener('click', () => notification.remove());
+        notification.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                notification.remove();
+            }
+        });
+        return;
+    }
 
     // アニメーション：フェードアウト開始（3秒後）
     setTimeout(() => {
@@ -594,27 +612,59 @@ function writeDraft() {
 const debouncedWriteDraft = debounce(writeDraft, DRAFT_SAVE_DEBOUNCE_MS);
 
 /**
+ * 保存されている下書きを読み出す。
+ *
+ * @returns {{ title: string, body: string, savedSnapshot: string } | null} 使える下書きが無ければ null
+ */
+function readStoredDraft() {
+    /** @type {any} */
+    let draft;
+    try {
+        const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (!raw) return null;
+        draft = JSON.parse(raw);
+    } catch (error) {
+        return null; // ストレージが使えない、または壊れた下書き
+    }
+
+    if (!draft || (!draft.title && !draft.body)) return null;
+
+    return {
+        title: draft.title ?? '',
+        body: draft.body ?? '',
+        savedSnapshot: draft.savedSnapshot ?? snapshotOf('', '')
+    };
+}
+
+/**
+ * 下書きに、ファイルへ書き出していない変更が残っているか。
+ *
+ * 起動処理から使う。この時点ではまだ下書きをエディタへ載せていないので、
+ * hasUnsavedChanges()（画面の内容を見る）では判定できない。
+ *
+ * @returns {boolean}
+ */
+function hasUnsavedDraft() {
+    const draft = readStoredDraft();
+    if (!draft) return false;
+
+    return snapshotOf(draft.title, draft.body) !== draft.savedSnapshot;
+}
+
+/**
  * 起動時に下書きを復元する。
  * 下書きは入力のたびに上書きしているため、常に前回終了時点の内容と一致する。
  *
  * @returns {boolean} 復元したか
  */
 function restoreDraft() {
-    let draft;
-    try {
-        const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
-        if (!raw) return false;
-        draft = JSON.parse(raw);
-    } catch (error) {
-        return false; // ストレージが使えない、または壊れた下書き
-    }
+    const draft = readStoredDraft();
+    if (!draft) return false;
 
-    if (!draft || (!draft.title && !draft.body)) return false;
-
-    titleInputEl.value = draft.title ?? '';
-    editorEl.value = draft.body ?? '';
+    titleInputEl.value = draft.title;
+    editorEl.value = draft.body;
     document.title = draft.title || DEFAULT_TITLE;
-    lastSavedSnapshot = draft.savedSnapshot ?? snapshotOf('', '');
+    lastSavedSnapshot = draft.savedSnapshot;
 
     return true;
 }
@@ -626,8 +676,9 @@ function restoreDraft() {
  * @param {string} rawContent - ファイルの生テキスト
  * @param {string} fileName - 表示・保存に使うファイル名
  * @param {FileSystemFileHandle | null} fileHandle - 上書き保存用ハンドル（従来方式では null）
+ * @param {{ loadedMessage?: string, sourceUrl?: string }} [options] - sourceUrl: 共有リンク経由のときの取得元
  */
-function applyLoadedContent(rawContent, fileName, fileHandle) {
+function applyLoadedContent(rawContent, fileName, fileHandle, options = {}) {
     const content = normalizeNewlines(rawContent);
     const { title, body } = splitTitleAndBody(content);
 
@@ -641,12 +692,15 @@ function applyLoadedContent(rawContent, fileName, fileHandle) {
     currentFileHandle = fileHandle;
     currentFileName = fileName;
 
+    // 共有ダイアログの初期値に使う。手元のファイルを開いたら空に戻す。
+    currentShareSourceUrl = options.sourceUrl ?? '';
+
     // 読み込み直後はファイルと一致しているので「保存済み」の基準にする
     markAsSavedToFile();
 
     if (buildSceneList()) switchLeftTab('outline');
 
-    showNotification(`ファイル「${fileName}」を読み込みました。`, 'success');
+    showNotification(options.loadedMessage ?? `ファイル「${fileName}」を読み込みました。`, 'success');
 }
 
 /**
@@ -733,20 +787,277 @@ function handleFileSelect(event) {
     input.value = '';
 }
 
-/* 
+/*
+========================================
+共有リンク
+========================================
+straw はサーバーを持たないので、共有できるのは「どこかに置いた台本テキストを
+指すURL」だけ。URLの解釈と変換は share.js が持つ。ここが受け持つのは
+「取りに行く」「利用者に確認する」「画面へ出す」の3つ。
+
+受け取った側が保存すると手元の新しいファイルになる。ファイルハンドルを
+持たないため、共有元のファイルが書き換わることはない。
+*/
+
+/** 現在開いている台本の取得元URL。共有ダイアログの初期値に使う */
+let currentShareSourceUrl = '';
+
+const shareDialogEl = requireElement('#share-dialog', HTMLDialogElement);
+const shareSourceInputEl = requireElement('#share-source-input', HTMLInputElement);
+const shareOutputEl = requireElement('#share-output', HTMLTextAreaElement);
+const shareResultEl = requireElement('#share-result', HTMLElement);
+const shareStatusEl = requireElement('#share-status', HTMLElement);
+
+/**
+ * HTTPエラーを、置き場所の事情を踏まえた説明にする。
+ *
+ * Googleドライブは「非公開のファイル」にも「存在しないファイル」と同じ404を返す
+ * （存在の有無を漏らさないため）。共有設定の変更忘れが最も起きやすい失敗なので、
+ * 404を素通しせずそこへ誘導する。
+ *
+ * @param {{ provider: string }} source
+ * @param {number} status
+ * @returns {string}
+ */
+function describeShareHttpFailure(source, status) {
+    if (source.provider === 'googledrive') {
+        if (status === 404) {
+            return 'ファイルが見つかりません。共有設定が「リンクを知っている全員」になっているか確認してください'
+                + '（非公開のままのファイルも、存在しないファイルと同じ404になります）。';
+        }
+        if (status === 403) {
+            return 'Googleドライブへのアクセスが拒否されました（HTTP 403）。'
+                + 'APIキーの制限設定、または利用量の上限を確認してください。';
+        }
+    }
+
+    if (status === 404) {
+        return 'ファイルが見つかりません（HTTP 404）。'
+            + 'URLと、リンクを知っていれば閲覧できる状態になっているかを確認してください。';
+    }
+
+    if (status === 401 || status === 403) {
+        return `アクセスが拒否されました（HTTP ${status}）。ファイルの公開設定を確認してください。`;
+    }
+
+    return `読み込めませんでした（HTTP ${status}）。`;
+}
+
+/**
+ * 取得失敗の理由を、利用者が次に何をすればよいか分かる言葉にする。
+ *
+ * CORS拒否は fetch の TypeError としてしか観測できず、レスポンスもステータス
+ * コードも得られない。「straw の不具合ではなく置き場所の制約である」ことを
+ * 伝えないと、原因不明の失敗に見えてしまう。
+ *
+ * @param {{ displayUrl: string }} source
+ * @param {unknown} error
+ * @returns {string}
+ */
+function describeShareFetchFailure(source, error) {
+    if (error instanceof TypeError) {
+        return `${source.displayUrl} を読み込めませんでした。`
+            + 'この置き場所はブラウザからの直接読み込み（CORS）を許可していない可能性があります。'
+            + `${listShareProviderLabels().join(' / ')}の共有リンク、`
+            + 'またはCORSを許可したサーバー上のファイルをお使いください。';
+    }
+
+    const detail = error instanceof Error ? error.message : String(error);
+    return `${source.displayUrl} を読み込めませんでした: ${detail}`;
+}
+
+/**
+ * 参照先から台本テキストを取得する。
+ *
+ * @param {{ provider: string, fetchUrl: string }} source
+ * @returns {Promise<string>}
+ */
+async function fetchSharedText(source) {
+    // 認証情報は一切送らない。「リンクを知っていれば読める」ファイルだけを対象にする。
+    const response = await fetch(source.fetchUrl, {
+        credentials: 'omit',
+        redirect: 'follow',
+        headers: { Accept: 'text/plain, */*;q=0.8' }
+    });
+
+    if (!response.ok) {
+        throw new Error(describeShareHttpFailure(source, response.status));
+    }
+
+    const declaredLength = Number(response.headers.get('content-length'));
+    if (Number.isFinite(declaredLength) && declaredLength > SHARE_MAX_SOURCE_BYTES) {
+        throw new Error('ファイルが大きすぎます。');
+    }
+
+    const text = await response.text();
+    if (text.length > SHARE_MAX_SOURCE_BYTES) {
+        throw new Error('ファイルが大きすぎます。');
+    }
+
+    return text;
+}
+
+/**
+ * 共有リンクの取得を中止し、下書きが残っていれば元に戻す。
+ *
+ * @param {string} message
+ */
+function cancelSharedLoad(message) {
+    if (restoreDraft()) {
+        updateVerticalDisplay();
+        if (buildSceneList()) switchLeftTab('outline');
+        showNotification(`${message}前回の続きを復元しました。`, 'success');
+        return;
+    }
+
+    showNotification(message, 'warning');
+}
+
+/**
+ * 共有された台本を読み込む。
+ *
+ * @param {string} rawUrl - 台本テキストのURL
+ * @param {{ confirmBeforeFetch: boolean }} options - 他人から受け取ったリンクなら true
+ * @returns {Promise<boolean>} 読み込めたか
+ */
+async function loadFromShareSource(rawUrl, options) {
+    const source = resolveShareSource(rawUrl);
+    if (!source.ok) {
+        showNotification(source.reason, 'error', { persistent: true });
+        return false;
+    }
+
+    // 他人から受け取ったリンクを黙って取りに行かない。
+    // 自分の台本と見分けがつかないまま、外部の内容が開くのを防ぐ。
+    if (options.confirmBeforeFetch) {
+        // 未保存の変更があるときだけ警告を足す。共有リンクを読み直しただけで
+        // 毎回警告が出ると、確認そのものが読まれなくなる。
+        const warning = hasUnsavedDraft()
+            ? '\n※ファイルに保存していない変更が残っています。読み込むと失われます。\n'
+            : '';
+        const accepted = window.confirm(
+            `共有リンクです。次のURLから台本を読み込みます。\n\n${source.displayUrl}\n${warning}\n読み込みますか？`
+        );
+        if (!accepted) {
+            cancelSharedLoad('共有リンクの読み込みを中止しました。');
+            return false;
+        }
+    }
+
+    /** @type {string} */
+    let text;
+    try {
+        text = await fetchSharedText(source);
+    } catch (error) {
+        console.error('共有リンクの取得エラー:', error);
+        showNotification(describeShareFetchFailure(source, error), 'error', { persistent: true });
+        return false;
+    }
+
+    // 参照先はプレーンテキストなので、取得できただけでは台本とは限らない
+    const problem = describeShareContentProblem(text);
+    if (problem && problem.level === 'error') {
+        showNotification(problem.message, 'error', { persistent: true });
+        return false;
+    }
+
+    applyLoadedContent(text, source.fileName, null, {
+        sourceUrl: source.displayUrl,
+        loadedMessage: `共有リンクから読み込みました（${source.providerLabel}）。`
+            + '保存すると、手元の新しいファイルになります。'
+    });
+
+    if (problem) {
+        showNotification(problem.message, 'warning', { persistent: true });
+    }
+
+    return true;
+}
+
+/**
+ * 共有ダイアログの状態表示を差し替える。
+ *
+ * @param {string} message
+ */
+function setShareDialogStatus(message) {
+    shareStatusEl.textContent = message;
+}
+
+/** 共有ダイアログを開く */
+function openShareDialog() {
+    setShareDialogStatus('');
+    shareOutputEl.value = '';
+    shareResultEl.hidden = true;
+    shareSourceInputEl.value = currentShareSourceUrl;
+    shareDialogEl.showModal();
+}
+
+/** 共有ダイアログを閉じる */
+function closeShareDialog() {
+    shareDialogEl.close();
+}
+
+/** 入力されたURLから共有URLを組み立てて表示する */
+function buildShareUrlFromInput() {
+    const source = resolveShareSource(shareSourceInputEl.value);
+    if (!source.ok) {
+        shareOutputEl.value = '';
+        shareResultEl.hidden = true;
+        setShareDialogStatus(source.reason);
+        return;
+    }
+
+    shareOutputEl.value = buildShareUrl(window.location.href, source.displayUrl);
+    shareResultEl.hidden = false;
+    setShareDialogStatus(`共有URLを作りました（${source.providerLabel}）。`);
+}
+
+/** 共有URLをクリップボードへコピーする */
+async function copyShareUrl() {
+    if (!shareOutputEl.value) return;
+
+    // コピーできなかったときに手で拾えるよう、必ず選択状態にしてから試す
+    shareOutputEl.focus();
+    shareOutputEl.select();
+
+    if (!navigator.clipboard) {
+        setShareDialogStatus('この環境では自動コピーができません。選択されているURLを手動でコピーしてください。');
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(shareOutputEl.value);
+        setShareDialogStatus('クリップボードにコピーしました。');
+    } catch (error) {
+        console.error('共有URLのコピーエラー:', error);
+        setShareDialogStatus('コピーできませんでした。選択されているURLを手動でコピーしてください。');
+    }
+}
+
+// 貼れる置き場所は配信環境の設定（APIキーの有無）で変わるため、案内文はJS側で組み立てる
+requireElement('#share-providers', HTMLElement).textContent
+    = `${listShareProviderLabels().join(' / ')}の共有リンクは、そのまま貼り付けられます。`;
+
+/*
 ========================================
 アプリケーション初期化
 ========================================
 */
 
-// 前回の下書きがあれば復元してから初期プレビューを表示する
-const draftRestored = restoreDraft();
+// 共有リンクで開かれたかを先に見る。下書きの自動復元と競合するため、
+// 共有リンクのときは復元せず、読み込みの確認をとってから上書きする。
+const sharedSourceUrl = readShareSourceParam(window.location.href);
+const draftRestored = sharedSourceUrl ? false : restoreDraft();
 
 updateVerticalDisplay();
 
 if (draftRestored) {
     if (buildSceneList()) switchLeftTab('outline');
     showNotification('前回の続きを復元しました。', 'success');
+}
+
+if (sharedSourceUrl) {
+    void loadFromShareSource(sharedSourceUrl, { confirmBeforeFetch: true });
 }
 
 // 未保存の変更があるまま離脱しようとしたら確認する

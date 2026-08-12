@@ -1,6 +1,6 @@
 // 台本整形エンジン（format.js）の回帰テスト
 //
-// 実行: node --test test/
+// 実行: node --test test/*.test.js
 // 依存パッケージなし（Node 組み込みの node:test / node:assert を使用）。
 // package.json を置かないのは、Amplify のビルド検出を変えたくないため。
 
@@ -489,6 +489,40 @@ test('左パネルのタブが tablist として組まれている', () => {
     assert.match(html, /role="tablist"/);
     assert.equal((html.match(/role="tab"/g) ?? []).length, 2);
     assert.equal((html.match(/role="tabpanel"/g) ?? []).length, 2);
+});
+
+test('app.js が必須とする要素が index.html にある', () => {
+    const html = readProjectFile('index.html');
+    const app = readProjectFile('app.js');
+
+    const selectors = [...app.matchAll(/requireElement\('([^']+)'/g)].map((m) => m[1]);
+    assert.ok(selectors.length > 0, 'requireElement の呼び出しが見つからない');
+
+    // requireElement は見つからないと例外を投げる。1つ欠けるだけで起動時に落ち、
+    // アプリ全体が動かなくなるので、対応を静的に確かめておく。
+    const missing = [...new Set(selectors)].filter((selector) => {
+        const name = selector.slice(1);
+        return selector.startsWith('#')
+            ? !html.includes(`id="${name}"`)
+            : !new RegExp(`class="[^"]*\\b${name}\\b`).test(html);
+    });
+
+    assert.deepEqual(missing, [], 'app.js が要求する要素が index.html に無い');
+});
+
+test('index.html のイベント属性が呼ぶ関数は app.js にある', () => {
+    const html = readProjectFile('index.html');
+    const app = readProjectFile('app.js');
+
+    const handlers = [...html.matchAll(/\son(?:click|change)="(\w+)\(/g)].map((m) => m[1]);
+    assert.ok(handlers.length > 0, 'イベント属性が見つからない');
+
+    // onclick から呼ぶ以上、対象はグローバルの関数宣言でなければならない
+    const missing = [...new Set(handlers)].filter(
+        (name) => !new RegExp(`^(?:async )?function ${name}\\(`, 'm').test(app)
+    );
+
+    assert.deepEqual(missing, [], 'HTML から呼ばれているのに app.js に無い関数がある');
 });
 
 test('manifest のアイコンが any と maskable に分かれている', () => {

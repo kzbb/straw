@@ -1,6 +1,6 @@
 {
   "// 目的": [
-    "format.js と app.js を1つのプロジェクトとして型チェックさせる設定。",
+    "format.js と share.js と app.js を1つのプロジェクトとして型チェックさせる設定。",
     "この設定が無いとエディタが app.js を単独で検査してしまい、format.js の",
     "グローバル関数を『定義されていない』と誤報告する（実際のブラウザでは",
     "同じグローバルスコープを共有するので動く）。",
@@ -21,5 +21,5 @@
     "strictNullChecks": true,
     "useUnknownInCatchVariables": true
   },
-  "include": ["format.js", "app.js"]
+  "include": ["format.js", "share.js", "app.js"]
 }

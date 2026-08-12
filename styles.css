@@ -811,6 +811,125 @@ html, body {
     background-color: #dc3545;
 }
 
+/* 自分で閉じるまで残る通知。
+   #notification-area は pointer-events を切っているので、
+   クリックで閉じられるようこの要素だけ復活させる。 */
+.notification-persistent {
+    pointer-events: auto;
+    cursor: pointer;
+    max-width: 380px;
+    font-weight: normal;
+    line-height: 1.6;
+}
+
+.notification-persistent:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+/*
+========================================
+5.1. 共有ダイアログ
+========================================
+*/
+
+.share-dialog {
+    width: min(560px, calc(100vw - 40px));
+    padding: 24px;
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    background-color: #fff;
+    color: #212529;
+}
+
+.share-dialog::backdrop {
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.share-lead {
+    margin: 0 0 16px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.share-label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.share-input,
+.share-output {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    background-color: #fff;
+    color: #212529;
+}
+
+.share-input:focus,
+.share-output:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.share-output {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    background-color: #f8f9fa;
+    resize: vertical;
+    /* 長いURLがダイアログをはみ出さないようにする */
+    word-break: break-all;
+}
+
+#share-providers {
+    margin-top: 6px;
+    font-size: 0.8rem;
+}
+
+#share-result {
+    margin-top: 20px;
+}
+
+.share-actions {
+    margin: 12px 0;
+}
+
+.share-actions-end {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0;
+}
+
+/* 結果が出る前でも高さが変わらないよう、1行ぶんを確保しておく */
+.share-status {
+    min-height: 1.5em;
+    margin: 8px 0 0;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: #495057;
+}
+
+.share-note {
+    margin: 16px 0 0;
+    line-height: 1.7;
+}
+
+.share-close {
+    color: #6c757d;
+    border-color: #ced4da;
+}
+
+.share-close:hover {
+    background-color: #f1f3f5;
+}
+
 /*
 ========================================
 6. 印刷専用スタイル
@@ -849,6 +968,13 @@ html, body {
 
     /* プレビューヘッダー（印刷ボタン等）を非表示 */
     .right-column > .column-content > .d-flex {
+        display: none !important;
+    }
+
+    /* 画面に重ねて出すものは紙面に出さない
+       （通知は自分で閉じるまで残るものがあり、開いたままの印刷がありうる） */
+    #notification-area,
+    .share-dialog {
         display: none !important;
     }
 
